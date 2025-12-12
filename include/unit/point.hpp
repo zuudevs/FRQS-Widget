@@ -1,6 +1,6 @@
 #pragma once
 
-#include "interface_paired_unit_fwd.hpp"
+#include "interface_paired_unit.hpp"
 #include <compare>
 #include <type_traits>
 
@@ -8,7 +8,7 @@ namespace frqs::widget {
 
 template <typename Tv>
 requires (std::is_integral_v<Tv> || std::is_floating_point_v<Tv>)
-class Point {
+class Point : public IPair<Point<Tv>> {
 public :
 	using value_t = Tv ;
 

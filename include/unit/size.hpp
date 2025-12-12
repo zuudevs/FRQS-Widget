@@ -1,6 +1,6 @@
 #pragma once
 
-#include "interface_paired_unit_fwd.hpp"
+#include "interface_paired_unit.hpp"
 #include <compare>
 #include <type_traits>
 
@@ -8,20 +8,10 @@ namespace frqs::widget {
 
 template <typename Tv>
 requires (std::is_integral_v<Tv> || std::is_floating_point_v<Tv>)
-class Size {
+class Size : public IPair<Size<Tv>> {
 public :
 	friend class IPair<Size<Tv>> ;
 	using value_t = Tv ;
-
-private :
-	template <meta::arithmetic Val, meta::arithmetic Min, meta::arithmetic Max>
-	constexpr auto internalClamp(Val val, Max min, Min max) noexcept {
-		return (
-			val <= static_cast<Val>(min) ? static_cast<Val>(min) : (
-				val >= static_cast<Val>(max) ? static_cast<Val>(max) : val
-			)
-		) ;
-	}
 	
 public :
 	Tv w {0} ;
