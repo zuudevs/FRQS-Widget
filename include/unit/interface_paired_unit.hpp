@@ -1,6 +1,8 @@
 #pragma once
 
+#include <algorithm>
 #include <cstdint>
+#include <format>
 #include <limits>
 #include <type_traits>
 
@@ -68,8 +70,13 @@ public :
 	using self_t = IPair<Td> ;
 
 private :
-	constexpr const Td& child() const noexcept { return static_cast<const Td*>(this) ; }
-	constexpr Td& child() noexcept { return static_cast<Td*>(this) ; }
+	constexpr const Td& child() const noexcept { return static_cast<const Td&>(*this) ; }
+	constexpr Td& child() noexcept { return static_cast<Td&>(*this) ; }
+
+	template <typename Val, typename Min, typename Max>
+	constexpr auto internalClamp(Val val, Min min, Max max) const noexcept {
+        return std::clamp(val, static_cast<Val>(min), static_cast<Val>(max));
+	}
 
 	template <meta::paired_unit Tdo, typename Fn>
 	constexpr auto OpAdapt(const Tdo& o, Fn&& fn) const noexcept {
@@ -90,13 +97,6 @@ private :
 			internalClamp(fn(child().h, o.y), 0, std::numeric_limits<R>::max())
 		) ;
 	}
-
-	template <meta::arithmetic Val, meta::arithmetic Min, meta::arithmetic Max>
-	constexpr auto internalClamp(Val val, Max min, Min max) noexcept {
-		return (val <= static_cast<Val>(min) ? static_cast<Val>(min) : (
-				val >= static_cast<Val>(max) ? static_cast<Val>(max) : val)) ;
-	}
-
 
 	template <meta::arithmetic Val, typename Fn>
 	constexpr auto OpAdapt(Val val, Fn&& fn) const noexcept {
@@ -151,52 +151,104 @@ public :
 	}
 
 	template <meta::paired_unit Tdo>
-	constexpr self_t& operator+=(const Tdo& o) noexcept {
+	constexpr Td& operator+=(const Tdo& o) noexcept {
 		child() = child() + o ;
-		return *this ;
+		return child() ;
 	}
 
 	template <meta::paired_unit Tdo>
-	constexpr self_t& operator-=(const Tdo& o) noexcept {
+	constexpr Td& operator-=(const Tdo& o) noexcept {
 		child() = child() - o ;
-		return *this ;
+		return child() ;
 	}
 
 	template <meta::paired_unit Tdo>
-	constexpr self_t& operator*=(const Tdo& o) noexcept {
+	constexpr Td& operator*=(const Tdo& o) noexcept {
 		child() = child() * o ;
-		return *this ;
+		return child() ;
 	}
 
 	template <meta::paired_unit Tdo>
-	constexpr self_t& operator/=(const Tdo& o) noexcept {
+	constexpr Td& operator/=(const Tdo& o) noexcept {
 		child() = child() / o ;
-		return *this ;
+		return child() ;
 	}
 
 	template <meta::arithmetic Val>
-	constexpr self_t& operator+=(Val val) noexcept {
+	constexpr auto operator+(Val val) noexcept {
+		return OpAdapt(val, [](auto a, auto b) { return a + b ; }) ;
+	}
+
+	template <meta::arithmetic Val>
+	constexpr auto operator-(Val val) noexcept {
+		return OpAdapt(val, [](auto a, auto b) { return a - b ; }) ;
+	}
+
+	template <meta::arithmetic Val>
+	constexpr auto operator*(Val val) noexcept {
+		return OpAdapt(val, [](auto a, auto b) { return a * b ; }) ;
+	}
+
+	template <meta::arithmetic Val>
+	constexpr auto operator/(Val val) noexcept {
+		return OpAdapt(val, [](auto a, auto b) { return a / b ; }) ;
+	}
+
+	template <meta::arithmetic Val>
+	constexpr Td& operator+=(Val val) noexcept {
 		child() = child() + val ;
-		return *this ;
+		return child() ;
 	}
 
 	template <meta::arithmetic Val>
-	constexpr self_t& operator-=(Val val) noexcept {
+	constexpr Td& operator-=(Val val) noexcept {
 		child() = child() - val ;
-		return *this ;
+		return child() ;
 	}
 
 	template <meta::arithmetic Val>
-	constexpr self_t& operator*=(Val val) noexcept {
+	constexpr Td& operator*=(Val val) noexcept {
 		child() = child() * val ;
-		return *this ;
+		return child() ;
 	}
 
 	template <meta::arithmetic Val>
-	constexpr self_t& operator/=(Val val) noexcept {
+	constexpr Td& operator/=(Val val) noexcept {
 		child() = child() / val ;
-		return *this ;
+		return child() ;
+	}
+
+	inline std::string debug() const noexcept {
+		return (
+			meta::is_point<Td>::value ? 
+			std::format("Point(x: {}, y: {})", child().x, child().y) : 
+			std::format("Size(w: {}, h: {})", child().w, child().h)
+		) ;
 	}
 } ;
+
+template <typename Lhs, typename Rhs>
+requires (meta::is_paired_unit_v<Rhs>)
+constexpr auto operator+(Lhs lhs, const Rhs& rhs) noexcept {
+	return rhs + lhs ;
+}
+
+template <typename Lhs, typename Rhs>
+requires (meta::is_paired_unit_v<Rhs>)
+constexpr auto operator*(Lhs lhs, const Rhs& rhs) noexcept {
+	return rhs * lhs ;
+}
+
+template <typename Lhs, typename Rhs>
+requires (meta::is_paired_unit_v<Rhs>)
+constexpr auto operator-(Lhs lhs, const Rhs& rhs) noexcept {
+	return Rhs(lhs) - rhs ;
+}
+
+template <typename Lhs, typename Rhs>
+requires (meta::is_paired_unit_v<Rhs>)
+constexpr auto operator/(Lhs lhs, const Rhs& rhs) noexcept {
+	return Rhs(lhs) / rhs ;
+}
 
 } // namespace frqs::widget
