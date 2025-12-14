@@ -3,8 +3,9 @@
 #include <algorithm>
 #include <cstdint>
 #include <format>
+#include <functional>
 #include <limits>
-#include <type_traits>
+#include "../meta/arithmetic.hpp"
 
 namespace frqs::widget {
 
@@ -20,9 +21,6 @@ class Size ;
 
 namespace frqs::meta {
 
-template <typename Tv>
-concept arithmetic = std::is_integral_v<Tv> || std::is_floating_point_v<Tv> ;
-
 template <typename> 
 struct is_point
  : std::false_type {} ;
@@ -32,6 +30,9 @@ requires (std::is_integral_v<Tv> || std::is_floating_point_v<Tv>)
 struct is_point<widget::Point<Tv>>
  : std::true_type {} ;
 
+template <typename Tv>
+constexpr bool is_point_v = is_point<std::decay_t<Tv>>::value ;
+
 template <typename> 
 struct is_size
  : std::false_type {} ;
@@ -40,6 +41,9 @@ template <typename Tv>
 requires (std::is_integral_v<Tv> || std::is_floating_point_v<Tv>)
 struct is_size<widget::Size<Tv>>
  : std::true_type {} ;
+
+template <typename Tv>
+constexpr bool is_size_v = is_point<std::decay_t<Tv>>::value ;
 
 template <typename> 
 struct is_paired_unit
@@ -54,7 +58,7 @@ struct is_paired_unit<widget::Size<Tv>>
  : std::true_type {} ;
 
 template <typename Tv>
-constexpr bool is_paired_unit_v = is_paired_unit<Tv>::value ;
+constexpr bool is_paired_unit_v = is_paired_unit<std::decay<Tv>>::value ;
 
 template <typename Tv>
 concept paired_unit = is_paired_unit_v<Tv> ;
@@ -82,46 +86,54 @@ private :
 	requires (meta::is_paired_unit_v<Val> || meta::arithmetic<Val>)
 	constexpr auto OpAdapt(const Val& val, Fn&& fn) const noexcept {
 		if constexpr (std::is_arithmetic_v<Val>) {
-			if constexpr (meta::is_point<Td>::value) {
+			if constexpr (meta::is_point<Td>::value)
 				return Point(fn(child().x, val), fn(child().y, val)) ;
-			}
-			return Size(inClamp(fn(child().w, val)), inClamp(fn(child().h, val))) ;
+			else 
+				return Size(inClamp(fn(child().w, val)), inClamp(fn(child().h, val))) ;
 		} else if constexpr (meta::is_point<Td>::value) {
-			if constexpr (meta::is_point<Val>::value) {
+			if constexpr (meta::is_point<Val>::value) 
                 return Point(fn(child().x, val.x), fn(child().y, val.y)) ;
-            }
-            return Point(fn(child().x, val.w), fn(child().y, val.h)) ;
+			else
+            	return Point(fn(child().x, val.w), fn(child().y, val.h)) ;
 		} else { 
-			if constexpr (meta::is_point<Val>::value) {
+			if constexpr (meta::is_point<Val>::value) 
                 return Point(fn(child().w, val.x), fn(child().h, val.y)) ;
-            }
-            return Size(inClamp(fn(child().w, val.w)), inClamp(fn(child().h, val.h))) ;
+			else
+            	return Size(inClamp(fn(child().w, val.w)), inClamp(fn(child().h, val.h))) ;
 		}
 	}
 
 public :
+	template <meta::paired_unit Tdo>
+	constexpr operator Tdo() const noexcept {
+		if constexpr (meta::is_point<Td>::value)
+			return Tdo(child().x, child().y) ;
+		else 
+			return Tdo(child().w, child().h) ;
+	}
+
 	template <typename Val>
 	requires (meta::is_paired_unit_v<Val> || meta::arithmetic<Val>)
 	constexpr auto operator+(const Val& o) const noexcept {
-		return OpAdapt(o, [](auto a, auto b) { return a + b ; }) ;
+		return OpAdapt(o, std::plus{}) ;
 	}
 
 	template <typename Val>
 	requires (meta::is_paired_unit_v<Val> || meta::arithmetic<Val>)
 	constexpr auto operator-(const Val& o) const noexcept {
-		return OpAdapt(o, [](auto a, auto b) { return a - b ; }) ;
+		return OpAdapt(o, std::minus{}) ;
 	}
 
 	template <typename Val>
 	requires (meta::is_paired_unit_v<Val> || meta::arithmetic<Val>)
 	constexpr auto operator*(const Val& o) const noexcept {
-		return OpAdapt(o, [](auto a, auto b) { return a * b ; }) ;
+		return OpAdapt(o, std::multiplies{}) ;
 	}
 
 	template <typename Val>
 	requires (meta::is_paired_unit_v<Val> || meta::arithmetic<Val>)
 	constexpr auto operator/(const Val& o) const noexcept {
-		return OpAdapt(o, [](auto a, auto b) { return a / b ; }) ;
+		return OpAdapt(o, std::divides{}) ;
 	}
 
 	template <typename Val>
@@ -153,11 +165,10 @@ public :
 	}
 
 	inline std::string debug() const noexcept {
-		return (
-			meta::is_point<Td>::value ? 
-			std::format("Point(x: {}, y: {})", child().x, child().y) : 
-			std::format("Size(w: {}, h: {})", child().w, child().h)
-		) ;
+		if constexpr (meta::is_point<Td>::value)
+			return std::format("Point(x: {}, y: {})", child().x, child().y) ;
+		else 
+			return std::format("Size(w: {}, h: {})", child().w, child().h) ;
 	}
 } ;
 

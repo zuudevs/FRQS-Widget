@@ -1,6 +1,6 @@
 #pragma once
 
-#include "interface_paired_unit.hpp"
+#include "basic_paired.hpp"
 #include <compare>
 #include <type_traits>
 
