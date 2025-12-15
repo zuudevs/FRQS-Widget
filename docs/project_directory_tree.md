@@ -1,8 +1,8 @@
 FRQS_WIDGET/
-├── CMakeLists.txt
-├── .gitignore
+├── CMakeLists.txt						   # [EXISTS]
+├── .gitignore							   # [EXISTS]
 ├── include/
-│   ├── frqs_widget.hpp                    # [EXISTS] but error core/window not implemented
+│   ├── frqs_widget.hpp                    # [EXISTS] but error core/window not implemented (1)
 │   ├── meta/
 │   │   ├── arithmetic.hpp                 # [DELETED]
 │   │   └── concepts.hpp                   # [EXISTS]
@@ -14,7 +14,7 @@ FRQS_WIDGET/
 │   │   └── basic_paired.hpp               # [EXISTS]
 │   ├── core/
 │   │   ├── application.hpp                # [EXISTS]
-│   │   ├── window.hpp                     # [EXISTS] but error not implemeted, only declared
+│   │   ├── window.hpp                     # [EXISTS] but error not implemeted, only declared (1)
 │   │   ├── window_registry.hpp            # [EXISTS]
 │   │   └── native_handle.hpp              # [EXISTS]
 │   ├── event/
@@ -34,18 +34,18 @@ FRQS_WIDGET/
 │       └── message_queue.hpp              # [EXISTS]
 ├── src/
 │   ├── core/
-│   │   ├── application.cpp
-│   │   ├── window_impl.hpp                # PImpl details
-│   │   ├── window.cpp
-│   │   └── window_registry.cpp
+│   │   ├── application.cpp				   # [EXISTS] but error core/window not implemented (1)
+│   │   ├── window_impl.hpp                # [EXISTS] but error core/window not implemented (1)
+│   │   ├── window.cpp					   # [EXISTS] but error core/window not implemented (1)
+│   │   └── window_registry.cpp			   # [EXISTS]
 │   ├── event/
 │   │   ├── event_bus.cpp
 │   │   └── event_dispatcher.cpp
 │   ├── widget/
 │   │   └── widget.cpp
 │   ├── render/
-│   │   ├── renderer_d2d.hpp               # Direct2D implementation
-│   │   ├── renderer_d2d.cpp
+│   │   ├── renderer_d2d.hpp			   # [EXISTS]
+│   │   ├── renderer_d2d.cpp			   # [EXISTS]
 │   │   └── dirty_rect.cpp
 │   └── platform/
 │       ├── win32_window.cpp
@@ -56,3 +56,10 @@ FRQS_WIDGET/
 │   └── event_test.cpp
 └── examples/
     └── hello_window.cpp
+
+error msg :
+(1) = In included file: field has incomplete type 'WindowId'clang(field_incomplete_or_sizeless)
+window.hpp(37, 14): Error occurred here
+window.hpp(14, 8): Forward declaration of 'frqs::core::WindowId'
+window_impl.hpp
+d:\Project\Fast Realibility Query System\FRQS Widget\src\core\window_impl.hpp

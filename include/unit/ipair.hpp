@@ -1,6 +1,7 @@
 #pragma once
 
 #include <algorithm>
+#include <compare>
 #include <cstdint>
 #include <format>
 #include <functional>
@@ -94,6 +95,7 @@ private :
 	}
 
 public :
+	constexpr std::strong_ordering operator<=>(const self_t& o) const noexcept = default ;
 	template <meta::paired_unit Tdo>
 	constexpr operator Tdo() const noexcept {
 		if constexpr (meta::is_point<Td>::value)

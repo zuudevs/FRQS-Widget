@@ -84,43 +84,52 @@ set(HEADERS_PUBLIC
 )
 
 # ============================================================================
-# SOURCE FILES (To be implemented)
+# PRIVATE HEADERS (Implementation details)
 # ============================================================================
 
-set(SOURCES_IMPL
-    # Platform (to be implemented)
-    # src/platform/win32_window.cpp
-    # src/platform/message_queue.cpp
-    
-    # Core (to be implemented)
-    # src/core/application.cpp
-    # src/core/window.cpp
-    # src/core/window_registry.cpp
-    
-    # Event (to be implemented)
-    # src/event/event_bus.cpp
-    
-    # Widget (to be implemented)
-    # src/widget/widget.cpp
-    
-    # Render (to be implemented)
-    # src/render/dirty_rect.cpp
-    # src/render/renderer_d2d.cpp
+set(HEADERS_PRIVATE
+    src/core/window_impl.hpp
+    src/render/renderer_d2d.hpp
 )
 
 # ============================================================================
-# MAIN EXECUTABLE (Header-only for now)
+# SOURCE FILES (Implemented)
+# ============================================================================
+
+set(SOURCES_IMPL
+    # Core
+    src/core/application.cpp
+    src/core/window.cpp
+    src/core/window_registry.cpp
+    
+    # Widget
+    src/widget/widget.cpp
+    
+    # Render
+    src/render/renderer_d2d.cpp
+    
+    # Platform (to be implemented later)
+    # src/platform/win32_window.cpp
+    # src/platform/message_queue.cpp
+)
+
+# ============================================================================
+# MAIN EXECUTABLE
 # ============================================================================
 
 add_executable(FRQS_WIDGET
     src/main.cpp
     ${HEADERS_PUBLIC}
+    ${HEADERS_PRIVATE}
+    ${SOURCES_IMPL}
 )
 
 target_include_directories(FRQS_WIDGET
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
         $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
 )
 
 # ============================================================================
@@ -145,6 +154,40 @@ if(WIN32)
 endif()
 
 # ============================================================================
+# STATIC LIBRARY (Optional)
+# ============================================================================
+
+add_library(FRQS_WIDGET_LIB STATIC
+    ${HEADERS_PUBLIC}
+    ${HEADERS_PRIVATE}
+    ${SOURCES_IMPL}
+)
+
+target_include_directories(FRQS_WIDGET_LIB
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+    PRIVATE
+        ${CMAKE_SOURCE_DIR}/src
+)
+
+if(WIN32)
+    target_link_libraries(FRQS_WIDGET_LIB
+        PUBLIC
+            d2d1
+            dwrite
+    )
+    
+    target_compile_definitions(FRQS_WIDGET_LIB
+        PUBLIC
+            WIN32_LEAN_AND_MEAN
+            NOMINMAX
+            UNICODE
+            _UNICODE
+    )
+endif()
+
+# ============================================================================
 # TESTS (Optional)
 # ============================================================================
 
@@ -153,18 +196,17 @@ option(BUILD_TESTS "Build test executables" ON)
 if(BUILD_TESTS)
     add_executable(unit_tests
         tests/unit_test.cpp
-        ${HEADERS_PUBLIC}
+    )
+    
+    target_link_libraries(unit_tests
+        PRIVATE
+            FRQS_WIDGET_LIB
     )
     
     target_include_directories(unit_tests
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
-    
-    if(WIN32)
-        target_link_libraries(unit_tests PRIVATE d2d1 dwrite)
-        target_compile_definitions(unit_tests PRIVATE WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE)
-    endif()
 endif()
 
 # ============================================================================
@@ -172,15 +214,27 @@ endif()
 # ============================================================================
 
 if(MSVC)
-    source_group(TREE ${CMAKE_SOURCE_DIR}/include PREFIX "Header Files" FILES ${HEADERS_PUBLIC})
-    source_group(TREE ${CMAKE_SOURCE_DIR}/src PREFIX "Source Files" FILES ${SOURCES_IMPL})
+    # Public headers
+    source_group(TREE ${CMAKE_SOURCE_DIR}/include 
+                 PREFIX "Header Files/Public" 
+                 FILES ${HEADERS_PUBLIC})
+    
+    # Private headers
+    source_group(TREE ${CMAKE_SOURCE_DIR}/src 
+                 PREFIX "Header Files/Private" 
+                 FILES ${HEADERS_PRIVATE})
+    
+    # Source files
+    source_group(TREE ${CMAKE_SOURCE_DIR}/src 
+                 PREFIX "Source Files" 
+                 FILES ${SOURCES_IMPL})
 endif()
 
 # ============================================================================
 # INSTALLATION (Optional)
 # ============================================================================
 
-install(TARGETS FRQS_WIDGET
+install(TARGETS FRQS_WIDGET FRQS_WIDGET_LIB
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
@@ -190,3 +244,25 @@ install(DIRECTORY include/
     DESTINATION include
     FILES_MATCHING PATTERN "*.hpp"
 )
+
+# ============================================================================
+# BUILD SUMMARY
+# ============================================================================
+
+message(STATUS "========================================")
+message(STATUS "FRQS-Widget Configuration Summary")
+message(STATUS "========================================")
+message(STATUS "Version: ${PROJECT_VERSION}")
+message(STATUS "C++ Standard: C++${CMAKE_CXX_STANDARD}")
+message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
+message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Build Tests: ${BUILD_TESTS}")
+message(STATUS "========================================")
+message(STATUS "Implementation Status:")
+message(STATUS "  ✓ Headers: Complete")
+message(STATUS "  ✓ Widget: Implemented")
+message(STATUS "  ✓ Window: Implemented (stub)")
+message(STATUS "  ✓ Application: Implemented (stub)")
+message(STATUS "  ✓ Renderer: Implemented (Direct2D)")
+message(STATUS "  ⚠ Platform: Pending (Win32)")
+message(STATUS "========================================")
