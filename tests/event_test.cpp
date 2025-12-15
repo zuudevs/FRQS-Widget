@@ -5,6 +5,7 @@
 #include <chrono>
 
 using namespace frqs;
+using namespace frqs::event;
 
 // ============================================================================
 // TEST HELPERS

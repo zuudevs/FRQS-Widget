@@ -102,15 +102,21 @@ set(SOURCES_IMPL
     src/core/application.cpp
     src/core/window.cpp
     src/core/window_registry.cpp
+
+	# Event
+    src/event/event_bus.cpp
+    src/event/event_dispatcher.cpp
     
     # Widget
     src/widget/widget.cpp
     
     # Render
     src/render/renderer_d2d.cpp
+	src/render/dirty_rect.cpp
     
     # Platform
     src/platform/win32_window.cpp
+	src/platform/message_queue.cpp
 )
 
 # ============================================================================

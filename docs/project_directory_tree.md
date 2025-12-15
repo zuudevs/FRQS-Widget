@@ -53,9 +53,9 @@ FRQS_WIDGET/
 │       └── message_queue.cpp			   # [EXISTS]
 ├── tests/
 │   ├── unit_test.cpp                      # [EXISTS]
-│   ├── window_test.cpp
-│   └── event_test.cpp
+│   ├── window_test.cpp					   # [EXISTS]
+│   └── event_test.cpp					   # [EXISTS]
 └── examples/
-    └── hello_window.cpp
+    └── hello_window.cpp				   # [EXISTS]
 
 error msg :
