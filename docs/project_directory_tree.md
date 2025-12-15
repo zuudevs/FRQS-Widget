@@ -40,17 +40,17 @@ FRQS_WIDGET/
 │   │   ├── window.cpp					   # [EXISTS]
 │   │   └── window_registry.cpp			   # [EXISTS]
 │   ├── event/
-│   │   ├── event_bus.cpp
-│   │   └── event_dispatcher.cpp
+│   │   ├── event_bus.cpp				   # [EXISTS]
+│   │   └── event_dispatcher.cpp		   # [EXISTS]
 │   ├── widget/
 │   │   └── widget.cpp					   # [EXISTS]
 │   ├── render/
 │   │   ├── renderer_d2d.hpp			   # [EXISTS]
 │   │   ├── renderer_d2d.cpp			   # [EXISTS]
-│   │   └── dirty_rect.cpp
+│   │   └── dirty_rect.cpp				   # [EXISTS]
 │   └── platform/
-│       ├── win32_window.cpp			   # [EXISTS] see error msg (1)
-│       └── message_queue.cpp
+│       ├── win32_window.cpp			   # [EXISTS]
+│       └── message_queue.cpp			   # [EXISTS]
 ├── tests/
 │   ├── unit_test.cpp                      # [EXISTS]
 │   ├── window_test.cpp
@@ -59,5 +59,3 @@ FRQS_WIDGET/
     └── hello_window.cpp
 
 error msg :
-(1)
-- 'pImpl_' is a private member of 'frqs::core::Window'
