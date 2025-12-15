@@ -4,13 +4,17 @@
 #include <string>
 #include "window_id.hpp"
 #include "../unit/rect.hpp"
-#include "../platform/win32_safe.hpp"
 #include "../widget/iwidget.hpp"
 
 namespace frqs::core {
 
 // Forward declarations
 class WindowRegistry;
+
+// Forward declare unsafe namespace and its function BEFORE using as friend
+namespace unsafe {
+    void* getNativeHandle(const class Window* window) noexcept;
+}
 
 // ============================================================================
 // WINDOW CREATION PARAMETERS

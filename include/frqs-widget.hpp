@@ -27,10 +27,11 @@
 #include "event/event.hpp"
 #include "event/event_bus.hpp"
 
-// Core infrastructure
-#include "core/application.hpp"
+// Core infrastructure (order matters!)
+#include "core/window_id.hpp"        // Must come before window.hpp
 #include "core/window.hpp"
 #include "core/window_registry.hpp"
+#include "core/application.hpp"
 
 // Widget system
 #include "widget/iwidget.hpp"
@@ -57,6 +58,7 @@ namespace frqs {
     using core::Application;
     using core::Window;
     using core::WindowParams;
+    using core::WindowId;
 }
 
 // ============================================================================
@@ -92,7 +94,7 @@ namespace frqs {
 
 /*
 
-#include <frqs_widget.hpp>
+#include <frqs-widget.hpp>
 
 int main() {
     using namespace frqs;

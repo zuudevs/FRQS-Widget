@@ -2,7 +2,7 @@ FRQS_WIDGET/
 ├── CMakeLists.txt						   # [EXISTS]
 ├── .gitignore							   # [EXISTS]
 ├── include/
-│   ├── frqs_widget.hpp                    # [EXISTS] but error core/window not implemented (1)
+│   ├── frqs_widget.hpp                    # [EXISTS] but error see error msg (1)
 │   ├── meta/
 │   │   ├── arithmetic.hpp                 # [DELETED]
 │   │   └── concepts.hpp                   # [EXISTS]
@@ -14,8 +14,8 @@ FRQS_WIDGET/
 │   │   └── basic_paired.hpp               # [EXISTS]
 │   ├── core/
 │   │   ├── application.hpp                # [EXISTS]
-│   │   ├── window.hpp                     # [EXISTS] but error not implemeted, only declared (1)
-│   │   ├── window_id.hpp                  # [EXISTS] but error undeclared and 'getNativeHandleUnsafe' is a private member (2)
+│   │   ├── window.hpp                     # [EXISTS] but error see error msg (1)
+│   │   ├── window_id.hpp                  # [EXISTS]
 │   │   ├── window_registry.hpp            # [EXISTS]
 │   │   └── native_handle.hpp              # [EXISTS]
 │   ├── event/
@@ -35,9 +35,9 @@ FRQS_WIDGET/
 │       └── message_queue.hpp              # [EXISTS]
 ├── src/
 │   ├── core/
-│   │   ├── application.cpp				   # [EXISTS] but error core/window not implemented (1)
-│   │   ├── window_impl.hpp                # [EXISTS] but error core/window not implemented (1)
-│   │   ├── window.cpp					   # [EXISTS] but error core/window not implemented (1)
+│   │   ├── application.cpp				   # [EXISTS] but error see error msg (1)
+│   │   ├── window_impl.hpp                # [EXISTS] but error see error msg (1)
+│   │   ├── window.cpp					   # [EXISTS] but error see error msg (1)
 │   │   └── window_registry.cpp			   # [EXISTS]
 │   ├── event/
 │   │   ├── event_bus.cpp
@@ -59,13 +59,6 @@ FRQS_WIDGET/
     └── hello_window.cpp
 
 error msg :
-(1) = 
-- In included file: field has incomplete type 'WindowId'clang(field_incomplete_or_sizeless)
-- window.hpp(37, 14): Error occurred here
-- window.hpp(14, 8): Forward declaration of 'frqs::core::WindowId'
-- window_impl.hpp
-- d:\Project\Fast Realibility Query System\FRQS Widget\src\core\window_impl.hpp
-
-(2) = 
-- Use of undeclared identifier 'unsafe'clang(undeclared_var_use), 
-- 'getNativeHandleUnsafe' is a private member of 'frqs::core::Window'
+(1) :
+- In included file: friend declaration of 'getNativeHandle' does not match any declaration in namespace 'frqs::core::unsafe'clang(qualified_friend_no_match)
+- window.hpp(16, 11): Candidate function has type mismatch at 1st parameter (expected 'const Window *' but has 'const class Window *')
