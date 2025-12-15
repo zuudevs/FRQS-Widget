@@ -1,6 +1,7 @@
 #include "../../include/platform/win32_safe.hpp"
 #include "../../include/core/window.hpp"
 #include "../../include/core/application.hpp"
+#include "../core/window_impl.hpp"
 #include <unordered_map>
 #include <mutex>
 
@@ -36,14 +37,14 @@ private:
     void registerClass() {
         WNDCLASSEXW wcex = {};
         wcex.cbSize = sizeof(WNDCLASSEXW);
-        wcex.style = CS_HREDRAW | CS_VREDRAW;
+        wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC; // Add CS_OWNDC for better rendering
         wcex.lpfnWndProc = windowProc;
         wcex.cbClsExtra = 0;
-        wcex.cbWndExtra = sizeof(void*); // Store Window pointer
+        wcex.cbWndExtra = sizeof(void*);
         wcex.hInstance = hInstance_;
         wcex.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
         wcex.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-        wcex.hbrBackground = nullptr; // We'll paint everything ourselves
+        wcex.hbrBackground = nullptr; // We paint everything ourselves
         wcex.lpszMenuName = nullptr;
         wcex.lpszClassName = CLASS_NAME;
         wcex.hIconSm = LoadIconW(nullptr, IDI_APPLICATION);
@@ -55,11 +56,9 @@ private:
     }
 
     static LRESULT CALLBACK windowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
-        // Get Window pointer from window user data
         core::Window* window = nullptr;
         
         if (msg == WM_NCCREATE) {
-            // Store Window pointer during creation
             auto* createStruct = reinterpret_cast<CREATESTRUCTW*>(lp);
             window = static_cast<core::Window*>(createStruct->lpCreateParams);
             SetWindowLongPtrW(hwnd, GWLP_USERDATA, reinterpret_cast<LONG_PTR>(window));
@@ -76,6 +75,9 @@ private:
 
     static LRESULT handleMessage(core::Window* window, HWND hwnd, UINT msg, 
                                 WPARAM wp, LPARAM lp) {
+        // Get Impl for direct access to renderer
+        auto* pImpl = window->pImpl_.get();
+        
         switch (msg) {
             case WM_CLOSE:
                 window->close();
@@ -88,7 +90,14 @@ private:
             case WM_SIZE: {
                 UINT width = LOWORD(lp);
                 UINT height = HIWORD(lp);
+                
+                // Update window size (this also resizes renderer buffer)
                 window->setSize(widget::Size<uint32_t>(width, height));
+                
+                // FIX: Immediate redraw after resize
+                if (!pImpl->inSizeMove) {
+                    window->forceRedraw();
+                }
                 return 0;
             }
 
@@ -99,31 +108,52 @@ private:
                 return 0;
             }
 
+            case WM_ENTERSIZEMOVE:
+                // FIX: Mark that we're in resize/move mode
+                pImpl->inSizeMove = true;
+                return 0;
+
+            case WM_EXITSIZEMOVE:
+                // FIX: Exit resize/move mode and force redraw
+                pImpl->inSizeMove = false;
+                window->forceRedraw();
+                return 0;
+
             case WM_PAINT: {
                 PAINTSTRUCT ps;
                 BeginPaint(hwnd, &ps);
-                window->forceRedraw();
+                
+                // FIX: Render during WM_PAINT
+                if (pImpl->renderer && pImpl->rootWidget && pImpl->visible) {
+                    pImpl->render();
+                }
+                
                 EndPaint(hwnd, &ps);
                 return 0;
             }
+            
+            case WM_DISPLAYCHANGE:
+                // Handle display settings change (e.g., resolution change)
+                window->invalidate();
+                return 0;
 
             case WM_ERASEBKGND:
                 // We handle all painting ourselves
                 return 1;
 
             case WM_SETFOCUS:
-                // TODO: Handle focus events
+                pImpl->focused = true;
                 return 0;
 
             case WM_KILLFOCUS:
-                // TODO: Handle focus lost events
+                pImpl->focused = false;
                 return 0;
 
             case WM_KEYDOWN:
             case WM_KEYUP:
             case WM_SYSKEYDOWN:
             case WM_SYSKEYUP:
-                // TODO: Handle keyboard events
+                // TODO: Dispatch keyboard events
                 return 0;
 
             case WM_LBUTTONDOWN:
@@ -133,7 +163,8 @@ private:
             case WM_MBUTTONDOWN:
             case WM_MBUTTONUP:
             case WM_MOUSEMOVE:
-                // TODO: Handle mouse events
+            case WM_MOUSEWHEEL:
+                // TODO: Dispatch mouse events
                 return 0;
 
             default:
@@ -162,15 +193,15 @@ public:
             style,
             x, y,
             width, height,
-            nullptr,        // Parent window
-            nullptr,        // Menu
+            nullptr,
+            nullptr,
             inst.hInstance_,
-            userData        // lpParam passed to WM_NCCREATE
+            userData
         );
     }
 
     static void ensureRegistered() {
-        instance(); // Force initialization
+        instance();
     }
 };
 
@@ -184,7 +215,6 @@ HWND createNativeWindow(
 ) {
     Win32WindowClass::ensureRegistered();
 
-    // Calculate window style
     DWORD style = WS_OVERLAPPEDWINDOW;
     DWORD exStyle = WS_EX_APPWINDOW;
 

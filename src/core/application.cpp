@@ -14,7 +14,6 @@ struct Application::Impl {
     std::chrono::steady_clock::time_point lastFrameTime;
     
     Impl() {
-        // Get current module instance
         hInstance = GetModuleHandleW(nullptr);
         lastFrameTime = std::chrono::steady_clock::now();
     }
@@ -33,9 +32,8 @@ Application::~Application() noexcept = default;
 // ============================================================================
 
 void Application::initialize() {
-    // TODO: Initialize Direct2D factory
-    // TODO: Register window class
-    // For now, just a placeholder
+    // Direct2D initialization happens per-window in RendererD2D constructor
+    // Window class registration happens in Win32WindowClass singleton
 }
 
 void Application::run() {
@@ -75,22 +73,16 @@ void Application::closeAllWindows() {
 // ============================================================================
 
 void Application::processPendingTasks() {
-    // Process all UI tasks from worker threads
     taskQueue_.processAll([](platform::UiTask&& task) {
-        task();  // Execute task on UI thread
+        task();
     });
 }
 
 bool Application::pollEvents() {
-    // TODO: Process Windows messages
-    // For now, just a stub
     return true;
 }
 
 void Application::processWindowMessages() {
-    // TODO: PeekMessage/DispatchMessage loop
-    // For now, just a placeholder
-    
     platform::NativeMessage msg;
     while (PeekMessageW(&msg, nullptr, 0, 0, PM_REMOVE)) {
         if (msg.message == WM_QUIT) {
@@ -108,7 +100,6 @@ void Application::processWindowMessages() {
 // ============================================================================
 
 void Application::requestRender() {
-    // Request render for all windows
     auto windows = WindowRegistry::instance().getAllWindows();
     for (auto& window : windows) {
         if (window && window->isVisible()) {
@@ -132,14 +123,12 @@ uint32_t Application::getTargetFps() const noexcept {
 }
 
 void Application::renderWindows() {
-    // TODO: Render all dirty windows
-    // For now, just a placeholder
-    
+    // FIX: Actually render all visible windows
     auto windows = WindowRegistry::instance().getAllWindows();
     for (auto& window : windows) {
         if (window && window->isVisible()) {
-            // TODO: Call renderer for each window
-            // renderer->render(window->getRootWidget());
+            // Force immediate render for smooth animations
+            window->forceRedraw();
         }
     }
 }
@@ -151,22 +140,21 @@ void Application::renderWindows() {
 void Application::runMainLoop() {
     using namespace std::chrono;
     
-    // Calculate frame duration based on target FPS
     auto frameDuration = pImpl_->targetFps > 0
         ? duration_cast<milliseconds>(seconds(1)) / pImpl_->targetFps
-        : milliseconds(0);
+        : milliseconds(16); // Default 60 FPS
 
     while (running_) {
         auto frameStart = steady_clock::now();
 
-        // Process Windows messages
+        // Process Windows messages (MUST be first to handle input)
         processWindowMessages();
 
         // Process UI tasks from worker threads
         processPendingTasks();
 
-        // Render all windows
-        renderWindows();
+        // FIX: Render all dirty windows (commented out for now - WM_PAINT handles it)
+        // renderWindows();
 
         // Check if any windows remain
         if (WindowRegistry::instance().getWindowCount() == 0) {
@@ -198,13 +186,12 @@ void Application::postDelayed(
     platform::UiTask task,
     const std::chrono::duration<Rep, Period>& delay
 ) {
-    // TODO: Implement delayed task execution
-    // For now, just execute immediately
+    // TODO: Implement proper delayed execution with timer
     (void)delay;
     postToUiThread(std::move(task));
 }
 
-// Explicit template instantiation for common duration types
+// Explicit template instantiation
 template void Application::postDelayed(
     platform::UiTask,
     const std::chrono::milliseconds&

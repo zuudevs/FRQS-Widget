@@ -13,7 +13,7 @@ namespace frqs::core {
 
 Window::Window(const WindowParams& params)
     : pImpl_(std::make_unique<Impl>())
-    , id_{0} // Will be set by WindowRegistry
+    , id_{0}
 {
     pImpl_->title = params.title;
     pImpl_->size = params.size;
@@ -26,7 +26,12 @@ Window::Window(const WindowParams& params)
     pImpl_->initializeDirtyRects();
 
     try {
+        // Create native window
         pImpl_->hwnd = platform::createNativeWindow(params, this);
+        
+        // FIX: Initialize renderer after HWND is created
+        pImpl_->initializeRenderer();
+        
     } catch (const std::exception& e) {
         throw std::runtime_error(
             std::string("Failed to create window: ") + e.what()
@@ -35,8 +40,9 @@ Window::Window(const WindowParams& params)
 }
 
 Window::~Window() noexcept {
-    // TODO: Destroy native window
-    // Cleanup handled by unique_ptr
+    if (pImpl_->hwnd) {
+        DestroyWindow(pImpl_->hwnd);
+    }
 }
 
 // ============================================================================
@@ -46,7 +52,6 @@ Window::~Window() noexcept {
 std::shared_ptr<Window> Window::create(const WindowParams& params) {
     auto window = std::shared_ptr<Window>(new Window(params));
     
-    // Register with WindowRegistry
     auto& registry = WindowRegistry::instance();
     window->id_ = registry.registerWindow(window);
     
@@ -73,14 +78,19 @@ void Window::setSize(const widget::Size<uint32_t>& size) {
     if (pImpl_->size == size) return;
     
     pImpl_->size = size;
+    
+    // FIX: Update dirty rects AND resize renderer buffer
     pImpl_->updateDirtyRectBounds();
     
+    // Update root widget rect if exists
+    if (pImpl_->rootWidget) {
+        pImpl_->rootWidget->setRect(getClientRect());
+    }
+    
     if (pImpl_->hwnd) {
-        // Get current window style
         DWORD style = static_cast<DWORD>(GetWindowLongPtrW(pImpl_->hwnd, GWL_STYLE));
         DWORD exStyle = static_cast<DWORD>(GetWindowLongPtrW(pImpl_->hwnd, GWL_EXSTYLE));
         
-        // Calculate window size including borders
         RECT rect = {0, 0, static_cast<LONG>(size.w), static_cast<LONG>(size.h)};
         AdjustWindowRectEx(&rect, style, FALSE, exStyle);
         
@@ -200,7 +210,6 @@ void Window::close() noexcept {
         pImpl_->hwnd = nullptr;
     }
     
-    // Unregister from WindowRegistry
     WindowRegistry::instance().unregisterWindow(id_);
 }
 
@@ -211,7 +220,6 @@ void Window::close() noexcept {
 void Window::setRootWidget(std::shared_ptr<widget::IWidget> root) {
     pImpl_->rootWidget = std::move(root);
     
-    // Set root widget rect to match client area
     if (pImpl_->rootWidget) {
         pImpl_->rootWidget->setRect(getClientRect());
         invalidate();
@@ -231,8 +239,10 @@ void Window::invalidate() noexcept {
         pImpl_->dirtyRects->markFullRedraw();
     }
     
-    // TODO: Request redraw from application
-    // Application::instance().requestRender(id_);
+    // Trigger WM_PAINT message
+    if (pImpl_->hwnd) {
+        InvalidateRect(pImpl_->hwnd, nullptr, FALSE);
+    }
 }
 
 void Window::invalidateRect(const widget::Rect<int32_t, uint32_t>& rect) noexcept {
@@ -240,15 +250,22 @@ void Window::invalidateRect(const widget::Rect<int32_t, uint32_t>& rect) noexcep
         pImpl_->dirtyRects->addDirtyRect(rect);
     }
     
-    // TODO: Request redraw from application
-    // Application::instance().requestRender(id_);
+    // Trigger WM_PAINT for specific region
+    if (pImpl_->hwnd) {
+        RECT r = {
+            static_cast<LONG>(rect.x),
+            static_cast<LONG>(rect.y),
+            static_cast<LONG>(rect.getRight()),
+            static_cast<LONG>(rect.getBottom())
+        };
+        InvalidateRect(pImpl_->hwnd, &r, FALSE);
+    }
 }
 
 void Window::forceRedraw() noexcept {
-    invalidate();
-    
-    // TODO: Force immediate redraw
-    // This would call the renderer directly
+    if (pImpl_->renderer && pImpl_->rootWidget && pImpl_->visible) {
+        pImpl_->render();
+    }
 }
 
 // ============================================================================
