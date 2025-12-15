@@ -1,5 +1,5 @@
 // src/main.cpp - Hello Window Example
-#include "../include/frqs-widget.hpp"
+#include "frqs-widget.hpp"
 #include <print>
 
 using namespace frqs;

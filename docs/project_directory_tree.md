@@ -2,7 +2,7 @@ FRQS_WIDGET/
 ├── CMakeLists.txt						   # [EXISTS]
 ├── .gitignore							   # [EXISTS]
 ├── include/
-│   ├── frqs_widget.hpp                    # [EXISTS] but error see error msg (1)
+│   ├── frqs_widget.hpp                    # [EXISTS]
 │   ├── meta/
 │   │   ├── arithmetic.hpp                 # [DELETED]
 │   │   └── concepts.hpp                   # [EXISTS]
@@ -14,7 +14,7 @@ FRQS_WIDGET/
 │   │   └── basic_paired.hpp               # [EXISTS]
 │   ├── core/
 │   │   ├── application.hpp                # [EXISTS]
-│   │   ├── window.hpp                     # [EXISTS] but error see error msg (1)
+│   │   ├── window.hpp                     # [EXISTS]
 │   │   ├── window_id.hpp                  # [EXISTS]
 │   │   ├── window_registry.hpp            # [EXISTS]
 │   │   └── native_handle.hpp              # [EXISTS]
@@ -35,9 +35,9 @@ FRQS_WIDGET/
 │       └── message_queue.hpp              # [EXISTS]
 ├── src/
 │   ├── core/
-│   │   ├── application.cpp				   # [EXISTS] but error see error msg (1)
-│   │   ├── window_impl.hpp                # [EXISTS] but error see error msg (1)
-│   │   ├── window.cpp					   # [EXISTS] but error see error msg (1)
+│   │   ├── application.cpp				   # [EXISTS]
+│   │   ├── window_impl.hpp                # [EXISTS]
+│   │   ├── window.cpp					   # [EXISTS]
 │   │   └── window_registry.cpp			   # [EXISTS]
 │   ├── event/
 │   │   ├── event_bus.cpp
@@ -59,6 +59,3 @@ FRQS_WIDGET/
     └── hello_window.cpp
 
 error msg :
-(1) :
-- In included file: friend declaration of 'getNativeHandle' does not match any declaration in namespace 'frqs::core::unsafe'clang(qualified_friend_no_match)
-- window.hpp(16, 11): Candidate function has type mismatch at 1st parameter (expected 'const Window *' but has 'const class Window *')

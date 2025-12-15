@@ -10,6 +10,7 @@ namespace frqs::core {
 
 // Forward declarations
 class WindowRegistry;
+class Window;
 
 // Forward declare unsafe namespace and its function BEFORE using as friend
 namespace unsafe {
