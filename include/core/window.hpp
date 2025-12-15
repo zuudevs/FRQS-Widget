@@ -6,6 +6,11 @@
 #include "../unit/rect.hpp"
 #include "../widget/iwidget.hpp"
 
+// Forward declare kelas Win32WindowClass
+namespace frqs::platform {
+    class Win32WindowClass;
+}
+
 namespace frqs::core {
 
 // Forward declarations
@@ -105,6 +110,7 @@ public:
     // ========================================================================
     friend class WindowRegistry;
     friend void* unsafe::getNativeHandle(const Window* window) noexcept;
+	friend class frqs::platform::Win32WindowClass;
 
 private:
     void* getNativeHandleUnsafe() const noexcept;  // Returns HWND as void*
