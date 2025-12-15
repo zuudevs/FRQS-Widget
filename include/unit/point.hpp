@@ -6,14 +6,13 @@
 
 namespace frqs::widget {
 
-template <typename Tv>
-requires (std::is_integral_v<Tv> || std::is_floating_point_v<Tv>)
-class Point : public IPair<Point<Tv>> {
+template <meta::numeric Tb>
+class Point : public IPair<Point<Tb>> {
 public :
-	using value_t = Tv ;
+	using value_t = Tb ;
 
-	Tv x {0} ;
-	Tv y {0} ;
+	Tb x {0} ;
+	Tb y {0} ;
 
 	constexpr Point() noexcept = default ;
 	constexpr Point(const Point&) noexcept = default ;
@@ -23,25 +22,25 @@ public :
 	constexpr std::strong_ordering operator<=>(const Point&) const noexcept = default ;
 	constexpr ~Point() noexcept = default ;
 
-	template <meta::arithmetic Val>
-	constexpr explicit Point(Val val) noexcept
-	 : x(static_cast<Tv>(val)), y(static_cast<Tv>(val)) {}
+	template <meta::numeric Tv>
+	constexpr explicit Point(Tv val) noexcept
+	 : x(static_cast<Tb>(val)), y(static_cast<Tb>(val)) {}
 
-	template <meta::arithmetic Vx, meta::arithmetic Vy>
-	constexpr Point(Vx vx, Vy vy) noexcept
-	 : x(static_cast<Tv>(vx)), y(static_cast<Tv>(vy)) {}
+	template <meta::numeric Tx, meta::numeric Ty>
+	constexpr Point(Tx vx, Ty vy) noexcept
+	 : x(static_cast<Tb>(vx)), y(static_cast<Tb>(vy)) {}
 
-	template <meta::arithmetic Val>
-	constexpr Point& operator=(Val val) noexcept {
-		x = y = static_cast<Tv>(val) ;
+	template <meta::numeric Tv>
+	constexpr Point& operator=(Tv val) noexcept {
+		x = y = static_cast<Tb>(val) ;
 		return *this ;
 	}
 } ;
 
-template <typename Tv>
-Point(Tv) -> Point<Tv> ;
+template <typename Tb>
+Point(Tb) -> Point<Tb> ;
 
-template <typename Tx, typename Tv>
-Point(Tx, Tv) -> Point<std::common_type_t<Tx, Tv>> ;
+template <typename Tx, typename Ty>
+Point(Tx, Ty) -> Point<std::common_type_t<Tx, Ty>> ;
 
 } // namespace frqs::widget

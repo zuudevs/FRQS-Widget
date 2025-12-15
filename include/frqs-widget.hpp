@@ -11,7 +11,6 @@
 // Single-include header for library users
 
 // Meta layer (concepts & traits)
-#include "meta/arithmetic.hpp"
 #include "meta/concepts.hpp"
 
 // Geometry units (already implemented)

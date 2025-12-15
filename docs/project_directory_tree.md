@@ -4,8 +4,8 @@ FRQS_WIDGET/
 ├── include/
 │   ├── frqs_widget.hpp                    # [EXISTS] but error meta/concept not implemented
 │   ├── meta/
-│   │   ├── arithmetic.hpp                 # [EXISTS]
-│   │   └── concepts.hpp                   # Type traits & concepts
+│   │   ├── arithmetic.hpp                 # [DELETED]
+│   │   └── concepts.hpp                   # [EXISTS]
 │   ├── unit/
 │   │   ├── point.hpp                      # [EXISTS]
 │   │   ├── size.hpp                       # [EXISTS]
@@ -16,18 +16,18 @@ FRQS_WIDGET/
 │   │   ├── application.hpp                # [EXISTS]
 │   │   ├── window.hpp                     # [EXISTS] but error not implemeted, only declared
 │   │   ├── window_registry.hpp            # [EXISTS]
-│   │   └── native_handle.hpp              # Safe HWND wrapper
+│   │   └── native_handle.hpp              # [EXISTS]
 │   ├── event/
 │   │   ├── event.hpp                      # [EXISTS]
-│   │   ├── event_bus.hpp                  # Event dispatcher
-│   │   └── event_types.hpp                # Event payload definitions
+│   │   ├── event_bus.hpp                  # [EXISTS]
+│   │   └── event_types.hpp                # [EXISTS]
 │   ├── widget/
 │   │   ├── iwidget.hpp                    # [EXISTS]
-│   │   ├── widget.hpp                     # Concrete widget base
-│   │   └── layout.hpp                     # Layout manager interface
+│   │   ├── widget.hpp                     # [EXISTS]
+│   │   └── layout.hpp                     # [EXISTS]
 │   ├── render/
-│   │   ├── renderer.hpp                   # Direct2D renderer interface
-│   │   ├── render_context.hpp             # Render state manager
+│   │   ├── renderer.hpp                   # [EXISTS]
+│   │   ├── render_context.hpp             # [EXISTS]
 │   │   └── dirty_rect.hpp                 # [EXISTS]
 │   └── platform/
 │       ├── win32_safe.hpp                 # [EXISTS]

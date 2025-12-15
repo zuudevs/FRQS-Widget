@@ -6,16 +6,14 @@
 
 namespace frqs::widget {
 
-template <typename Tv>
-requires (std::is_integral_v<Tv> || std::is_floating_point_v<Tv>)
-class Size : public IPair<Size<Tv>> {
+template <meta::numeric Tb>
+class Size : public IPair<Size<Tb>> {
 public :
-	friend class IPair<Size<Tv>> ;
-	using value_t = Tv ;
+	friend class IPair<Size<Tb>> ;
+	using value_t = Tb ;
 	
-public :
-	Tv w {0} ;
-	Tv h {0} ;
+	Tb w {0} ;
+	Tb h {0} ;
 
 	constexpr Size() noexcept = default ;
 	constexpr Size(const Size&) noexcept = default ;
@@ -25,17 +23,17 @@ public :
 	constexpr std::strong_ordering operator<=>(const Size&) const noexcept = default ;
 	constexpr ~Size() noexcept = default ;
 
-	template <meta::arithmetic Val>
-	constexpr explicit Size(Val val) noexcept
-	 : w(static_cast<Tv>(val)), h(static_cast<Tv>(val)) {}
+	template <meta::numeric Tv>
+	constexpr explicit Size(Tv val) noexcept
+	 : w(static_cast<Tb>(val)), h(static_cast<Tb>(val)) {}
 
-	template <meta::arithmetic Vx, meta::arithmetic Vy>
+	template <meta::numeric Vx, meta::numeric Vy>
 	constexpr Size(Vx vx, Vy vy) noexcept
-	 : w(static_cast<Tv>(vx)), h(static_cast<Tv>(vy)) {}
+	 : w(static_cast<Tb>(vx)), h(static_cast<Tb>(vy)) {}
 
-	template <meta::arithmetic Val>
-	constexpr Size& operator=(Val val) noexcept {
-		w = h = static_cast<Tv>(val) ;
+	template <meta::numeric Tv>
+	constexpr Size& operator=(Tv val) noexcept {
+		w = h = static_cast<Tb>(val) ;
 		return *this ;
 	}
 } ;

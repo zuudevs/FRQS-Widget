@@ -6,7 +6,7 @@
 
 namespace frqs::widget {
 
-template <meta::arithmetic Tp = int32_t, meta::arithmetic Ts = uint32_t>
+template <meta::numeric Tp = int32_t, meta::numeric Ts = uint32_t>
 class Rect ;
 
 } // namespace frqs::widget
@@ -16,8 +16,8 @@ namespace frqs::meta {
 template <typename>
 struct is_rect : std::false_type {} ;
 
-template <meta::arithmetic Tp, meta::arithmetic Ts>
-struct is_rect<widget::Rect<Tp, Ts>> : std::true_type {} ;
+template <meta::numeric Tp, meta::numeric Ts>
+struct is_rect<::frqs::widget::Rect<Tp, Ts>> : std::true_type {} ;
 
 template <typename Tv>
 constexpr bool is_rect_v = is_rect<std::decay_t<Tv>>::value ;
@@ -27,7 +27,7 @@ constexpr bool is_rect_v = is_rect<std::decay_t<Tv>>::value ;
 
 namespace frqs::widget {
 
-template <meta::arithmetic Tp, meta::arithmetic Ts>
+template <meta::numeric Tp, meta::numeric Ts>
 class Rect : public Point<Tp>, public Size<Ts> {
 public :
 	using self_t = Rect<Tp, Ts> ;
@@ -46,11 +46,11 @@ public :
 	constexpr ~Rect() noexcept = default ;
     
 
-    template <meta::arithmetic Tv>
+    template <meta::numeric Tv>
     constexpr explicit Rect(Tv val) noexcept
      : base_point_t(val), base_size_t(val) {}
 
-    template <meta::arithmetic Tx, meta::arithmetic Ty, meta::arithmetic Tw, meta::arithmetic Th>
+    template <meta::numeric Tx, meta::numeric Ty, meta::numeric Tw, meta::numeric Th>
     constexpr Rect(Tx x, Ty y, Tw w, Th h) noexcept
      : base_point_t(x, y), base_size_t(w, h) {}
 
@@ -59,7 +59,7 @@ public :
     constexpr Rect(const Tpo& po, const Tso& so) noexcept
      : base_point_t(po), base_size_t(so) {}
     
-    template <meta::arithmetic Tv>
+    template <meta::numeric Tv>
     constexpr Rect& operator=(Tv val) noexcept {
         getPoint() = val ;
         getSize() = val ;
@@ -118,7 +118,7 @@ public :
         	return Rect(getPoint() / val, getSize() / val) ;
     }
     
-    template <meta::arithmetic Tpo, meta::arithmetic Tso>
+    template <meta::numeric Tpo, meta::numeric Tso>
     constexpr operator Rect<Tpo, Tso>() const noexcept {
         return Rect<Tpo, Tso>(
             static_cast<Tpo>(this->x), static_cast<Tpo>(this->y),
