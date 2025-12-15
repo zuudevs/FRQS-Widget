@@ -75,18 +75,6 @@ std::wstring Window::getTitle() const {
 }
 
 void Window::setSize(const widget::Size<uint32_t>& size) {
-    if (pImpl_->size == size) return;
-    
-    pImpl_->size = size;
-    
-    // FIX: Update dirty rects AND resize renderer buffer
-    pImpl_->updateDirtyRectBounds();
-    
-    // Update root widget rect if exists
-    if (pImpl_->rootWidget) {
-        pImpl_->rootWidget->setRect(getClientRect());
-    }
-    
     if (pImpl_->hwnd) {
         DWORD style = static_cast<DWORD>(GetWindowLongPtrW(pImpl_->hwnd, GWL_STYLE));
         DWORD exStyle = static_cast<DWORD>(GetWindowLongPtrW(pImpl_->hwnd, GWL_EXSTYLE));
@@ -97,8 +85,25 @@ void Window::setSize(const widget::Size<uint32_t>& size) {
         int width = rect.right - rect.left;
         int height = rect.bottom - rect.top;
         
+        // ✅ SetWindowPos will trigger WM_SIZE which calls handleSizeMessage
         SetWindowPos(pImpl_->hwnd, nullptr, 0, 0, width, height,
                      SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+        
+        // ✅ Force process WM_SIZE message immediately
+        MSG msg;
+        while (PeekMessageW(&msg, pImpl_->hwnd, WM_SIZE, WM_SIZE, PM_REMOVE)) {
+            DispatchMessageW(&msg);
+        }
+        
+        // Now pImpl_->size has been updated by WM_SIZE handler
+    } else {
+        // No window yet, just set the size directly
+        pImpl_->size = size;
+        pImpl_->updateDirtyRectBounds();
+        
+        if (pImpl_->rootWidget) {
+            pImpl_->rootWidget->setRect(getClientRect());
+        }
     }
 }
 

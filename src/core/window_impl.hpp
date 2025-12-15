@@ -72,6 +72,21 @@ struct Window::Impl {
         }
     }
     
+    // Handle WM_SIZE message - update size and dependent systems
+    void handleSizeMessage(uint32_t newWidth, uint32_t newHeight) {
+        size = widget::Size<uint32_t>(newWidth, newHeight);
+        updateDirtyRectBounds();
+        
+        if (rootWidget) {
+            widget::Rect<int32_t, uint32_t> clientRect(0, 0, newWidth, newHeight);
+            rootWidget->setRect(clientRect);
+        }
+        
+        if (!inSizeMove) {
+            render();
+        }
+    }
+    
     // Render the window content
     void render() {
         if (!renderer || !rootWidget || !visible) return;

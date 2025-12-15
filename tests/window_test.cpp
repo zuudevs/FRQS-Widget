@@ -1,10 +1,37 @@
-// tests/window_test.cpp - Window Unit Tests
+// tests/window_test.cpp - Window Unit Tests (DEBUG VERSION)
 #include "frqs-widget.hpp"
 #include <print>
 #include <cassert>
 #include <thread>
+#include <string>     // Diperlukan untuk std::string
+#include <algorithm>  // Diperlukan untuk logika konversi
+#include <chrono>     // Diperlukan untuk std::chrono::milliseconds
 
 using namespace frqs;
+
+// ============================================================================
+// HELPER FUNCTIONS (Polymorphic Printing)
+// ============================================================================
+
+// 1. Helper untuk std::wstring (melakukan konversi ke std::string agar bisa dicetak ke stderr)
+inline std::string print_helper(const std::wstring& ws) {
+    return std::string(ws.begin(), ws.end());
+}
+
+// 2. Helper untuk wide string literals (const wchar_t*)
+inline std::string print_helper(const wchar_t* ws) {
+    return print_helper(std::wstring(ws));
+}
+
+// [FIX] 3. Helper untuk tipe data dasar (angka, bool, pointer, dll)
+// Tipe ini akan diteruskan langsung karena std::println sudah mendukungnya secara native
+template <typename T>
+concept PrintableAsIs = std::is_arithmetic_v<T> || std::is_pointer_v<T>;
+
+template <PrintableAsIs T>
+inline const T& print_helper(const T& val) {
+    return val;
+}
 
 // ============================================================================
 // TEST HELPERS
@@ -21,9 +48,13 @@ using namespace frqs;
     } g_testRegistrar_##name; \
     void test_##name()
 
+// [FIX MACRO] Menggunakan print_helper yang baru
 #define ASSERT_EQ(a, b) \
     if ((a) != (b)) { \
         std::println(stderr, "Assertion failed: {} != {}", #a, #b); \
+        /* print_helper akan memilih fungsi yang tepat: konversi string atau passthrough angka */ \
+        std::println(stderr, "  Expected: {}", print_helper(b)); \
+        std::println(stderr, "  Got: {}", print_helper(a)); \
         std::terminate(); \
     }
 
@@ -82,10 +113,29 @@ TEST(window_resize) {
     
     auto window = app.createWindow();
     
+    std::println("DEBUG: Initial size = {}x{}", window->getSize().w, window->getSize().h);
+    
     widget::Size newSize(1024u, 768u);
+    std::println("DEBUG: Requesting size = {}x{}", newSize.w, newSize.h);
+    
     window->setSize(newSize);
     
+    // Give Windows time to process messages
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    
     auto actualSize = window->getSize();
+    std::println("DEBUG: Actual size after setSize = {}x{}", actualSize.w, actualSize.h);
+    
+    // Check width
+    if (actualSize.w != newSize.w) {
+        std::println("ERROR: Width mismatch! Expected {} but got {}", newSize.w, actualSize.w);
+    }
+    
+    // Check height
+    if (actualSize.h != newSize.h) {
+        std::println("ERROR: Height mismatch! Expected {} but got {}", newSize.h, actualSize.h);
+    }
+    
     ASSERT_EQ(actualSize.w, newSize.w);
     ASSERT_EQ(actualSize.h, newSize.h);
     
@@ -158,6 +208,9 @@ TEST(window_registry) {
     
     window1->close();
     window2->close();
+    
+    // Memberikan waktu untuk registry membersihkan diri
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
     ASSERT_EQ(registry.getWindowCount(), initialCount);
 }

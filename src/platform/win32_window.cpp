@@ -37,14 +37,14 @@ private:
     void registerClass() {
         WNDCLASSEXW wcex = {};
         wcex.cbSize = sizeof(WNDCLASSEXW);
-        wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC; // Add CS_OWNDC for better rendering
+        wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
         wcex.lpfnWndProc = windowProc;
         wcex.cbClsExtra = 0;
         wcex.cbWndExtra = sizeof(void*);
         wcex.hInstance = hInstance_;
         wcex.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
         wcex.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-        wcex.hbrBackground = nullptr; // We paint everything ourselves
+        wcex.hbrBackground = nullptr;
         wcex.lpszMenuName = nullptr;
         wcex.lpszClassName = CLASS_NAME;
         wcex.hIconSm = LoadIconW(nullptr, IDI_APPLICATION);
@@ -75,7 +75,7 @@ private:
 
     static LRESULT handleMessage(core::Window* window, HWND hwnd, UINT msg, 
                                 WPARAM wp, LPARAM lp) {
-        // Get Impl for direct access to renderer
+        // Get Impl for direct access
         auto* pImpl = window->pImpl_.get();
         
         switch (msg) {
@@ -90,13 +90,9 @@ private:
             case WM_SIZE: {
                 UINT width = LOWORD(lp);
                 UINT height = HIWORD(lp);
-                pImpl->size = widget::Size<uint32_t>(width, height);
-                pImpl->updateDirtyRectBounds(); 
-
-				if (pImpl->rootWidget) 
-					pImpl->rootWidget->setRect(window->getClientRect());
-				if (!pImpl->inSizeMove) 
-					window->forceRedraw();
+                
+                // FIX: Use centralized size handler
+                pImpl->handleSizeMessage(width, height);
                 return 0;
             }
 
@@ -108,12 +104,10 @@ private:
             }
 
             case WM_ENTERSIZEMOVE:
-                // FIX: Mark that we're in resize/move mode
                 pImpl->inSizeMove = true;
                 return 0;
 
             case WM_EXITSIZEMOVE:
-                // FIX: Exit resize/move mode and force redraw
                 pImpl->inSizeMove = false;
                 window->forceRedraw();
                 return 0;
@@ -123,24 +117,22 @@ private:
                 BeginPaint(hwnd, &ps);
                 
                 if (pImpl->renderer && pImpl->rootWidget && pImpl->visible) {
-					try {
-						pImpl->render(); 
-					} catch (...) {
-						
-					}
-				}
+                    try {
+                        pImpl->render();
+                    } catch (...) {
+                        // Ignore render errors
+                    }
+                }
                 
                 EndPaint(hwnd, &ps);
                 return 0;
             }
             
             case WM_DISPLAYCHANGE:
-                // Handle display settings change (e.g., resolution change)
                 window->invalidate();
                 return 0;
 
             case WM_ERASEBKGND:
-                // We handle all painting ourselves
                 return 1;
 
             case WM_SETFOCUS:
