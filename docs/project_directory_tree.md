@@ -15,6 +15,7 @@ FRQS_WIDGET/
 │   ├── core/
 │   │   ├── application.hpp                # [EXISTS]
 │   │   ├── window.hpp                     # [EXISTS] but error not implemeted, only declared (1)
+│   │   ├── window_id.hpp                  # [EXISTS] but error undeclared and 'getNativeHandleUnsafe' is a private member (2)
 │   │   ├── window_registry.hpp            # [EXISTS]
 │   │   └── native_handle.hpp              # [EXISTS]
 │   ├── event/
@@ -58,8 +59,13 @@ FRQS_WIDGET/
     └── hello_window.cpp
 
 error msg :
-(1) = In included file: field has incomplete type 'WindowId'clang(field_incomplete_or_sizeless)
-window.hpp(37, 14): Error occurred here
-window.hpp(14, 8): Forward declaration of 'frqs::core::WindowId'
-window_impl.hpp
-d:\Project\Fast Realibility Query System\FRQS Widget\src\core\window_impl.hpp
+(1) = 
+- In included file: field has incomplete type 'WindowId'clang(field_incomplete_or_sizeless)
+- window.hpp(37, 14): Error occurred here
+- window.hpp(14, 8): Forward declaration of 'frqs::core::WindowId'
+- window_impl.hpp
+- d:\Project\Fast Realibility Query System\FRQS Widget\src\core\window_impl.hpp
+
+(2) = 
+- Use of undeclared identifier 'unsafe'clang(undeclared_var_use), 
+- 'getNativeHandleUnsafe' is a private member of 'frqs::core::Window'

@@ -5,34 +5,11 @@
 #include <mutex>
 #include <memory>
 #include <optional>
-#include <cstdint>
+#include "window_id.hpp"
 
 namespace frqs::core {
 
 class Window;
-
-// ============================================================================
-// WINDOW ID TYPE (Strong Type for Safety)
-// ============================================================================
-
-struct WindowId {
-    uint64_t value;
-    
-    constexpr bool operator==(const WindowId&) const noexcept = default;
-    constexpr auto operator<=>(const WindowId&) const noexcept = default;
-};
-
-} // namespace frqs::core
-
-// Hash specialization for WindowId
-template <>
-struct std::hash<frqs::core::WindowId> {
-    std::size_t operator()(const frqs::core::WindowId& id) const noexcept {
-        return std::hash<uint64_t>{}(id.value);
-    }
-};
-
-namespace frqs::core {
 
 // ============================================================================
 // WINDOW REGISTRY (Singleton, Thread-Safe)

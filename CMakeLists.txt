@@ -64,6 +64,7 @@ set(HEADERS_PUBLIC
     # Core
     include/core/application.hpp
     include/core/window.hpp
+    include/core/window_id.hpp
     include/core/window_registry.hpp
     include/core/native_handle.hpp
     
@@ -108,9 +109,8 @@ set(SOURCES_IMPL
     # Render
     src/render/renderer_d2d.cpp
     
-    # Platform (to be implemented later)
-    # src/platform/win32_window.cpp
-    # src/platform/message_queue.cpp
+    # Platform
+    src/platform/win32_window.cpp
 )
 
 # ============================================================================
@@ -261,8 +261,8 @@ message(STATUS "========================================")
 message(STATUS "Implementation Status:")
 message(STATUS "  ✓ Headers: Complete")
 message(STATUS "  ✓ Widget: Implemented")
-message(STATUS "  ✓ Window: Implemented (stub)")
-message(STATUS "  ✓ Application: Implemented (stub)")
+message(STATUS "  ✓ Window: Implemented")
+message(STATUS "  ✓ Application: Implemented")
 message(STATUS "  ✓ Renderer: Implemented (Direct2D)")
-message(STATUS "  ⚠ Platform: Pending (Win32)")
+message(STATUS "  ✓ Platform: Implemented (Win32)")
 message(STATUS "========================================")

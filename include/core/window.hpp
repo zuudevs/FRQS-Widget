@@ -2,16 +2,15 @@
 
 #include <memory>
 #include <string>
+#include "window_id.hpp"
 #include "../unit/rect.hpp"
-#include "../unit/size.hpp"
-#include "../unit/point.hpp"
+#include "../platform/win32_safe.hpp"
 #include "../widget/iwidget.hpp"
 
 namespace frqs::core {
 
 // Forward declarations
 class WindowRegistry;
-struct WindowId;
 
 // ============================================================================
 // WINDOW CREATION PARAMETERS
@@ -34,7 +33,7 @@ class Window {
 private:
     struct Impl;  // Forward declare - defined in .cpp (hides windows.h)
     std::unique_ptr<Impl> pImpl_;
-    WindowId id_;
+    WindowId id_;  // Now complete type
 
     // Private constructor - use create() factory
     explicit Window(const WindowParams& params);
