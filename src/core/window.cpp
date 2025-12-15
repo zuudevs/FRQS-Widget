@@ -1,6 +1,10 @@
 #include "window_impl.hpp"
 #include "../../include/core/window_registry.hpp"
 
+namespace frqs::platform {
+    HWND createNativeWindow(const core::WindowParams& params, void* windowPtr);
+}
+
 namespace frqs::core {
 
 // ============================================================================
@@ -21,8 +25,13 @@ Window::Window(const WindowParams& params)
     // Initialize dirty rect manager
     pImpl_->initializeDirtyRects();
 
-    // TODO: Create native window (Win32 HWND)
-    // This will be implemented in platform-specific code
+    try {
+        pImpl_->hwnd = platform::createNativeWindow(params, this);
+    } catch (const std::exception& e) {
+        throw std::runtime_error(
+            std::string("Failed to create window: ") + e.what()
+        );
+    }
 }
 
 Window::~Window() noexcept {
@@ -51,10 +60,9 @@ std::shared_ptr<Window> Window::create(const WindowParams& params) {
 void Window::setTitle(const std::wstring& title) {
     pImpl_->title = title;
     
-    // TODO: Update native window title
-    // if (pImpl_->hwnd) {
-    //     SetWindowTextW(pImpl_->hwnd, title.c_str());
-    // }
+    if (pImpl_->hwnd) {
+        SetWindowTextW(pImpl_->hwnd, title.c_str());
+    }
 }
 
 std::wstring Window::getTitle() const {
@@ -67,11 +75,21 @@ void Window::setSize(const widget::Size<uint32_t>& size) {
     pImpl_->size = size;
     pImpl_->updateDirtyRectBounds();
     
-    // TODO: Update native window size
-    // if (pImpl_->hwnd) {
-    //     SetWindowPos(pImpl_->hwnd, nullptr, 0, 0, size.w, size.h,
-    //                  SWP_NOMOVE | SWP_NOZORDER);
-    // }
+    if (pImpl_->hwnd) {
+        // Get current window style
+        DWORD style = static_cast<DWORD>(GetWindowLongPtrW(pImpl_->hwnd, GWL_STYLE));
+        DWORD exStyle = static_cast<DWORD>(GetWindowLongPtrW(pImpl_->hwnd, GWL_EXSTYLE));
+        
+        // Calculate window size including borders
+        RECT rect = {0, 0, static_cast<LONG>(size.w), static_cast<LONG>(size.h)};
+        AdjustWindowRectEx(&rect, style, FALSE, exStyle);
+        
+        int width = rect.right - rect.left;
+        int height = rect.bottom - rect.top;
+        
+        SetWindowPos(pImpl_->hwnd, nullptr, 0, 0, width, height,
+                     SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
 }
 
 widget::Size<uint32_t> Window::getSize() const noexcept {
@@ -83,11 +101,10 @@ void Window::setPosition(const widget::Point<int32_t>& pos) {
     
     pImpl_->position = pos;
     
-    // TODO: Update native window position
-    // if (pImpl_->hwnd) {
-    //     SetWindowPos(pImpl_->hwnd, nullptr, pos.x, pos.y, 0, 0,
-    //                  SWP_NOSIZE | SWP_NOZORDER);
-    // }
+    if (pImpl_->hwnd) {
+        SetWindowPos(pImpl_->hwnd, nullptr, pos.x, pos.y, 0, 0,
+                     SWP_NOSIZE | SWP_NOZORDER | SWP_NOACTIVATE);
+    }
 }
 
 widget::Point<int32_t> Window::getPosition() const noexcept {
@@ -107,11 +124,10 @@ void Window::show() noexcept {
     
     pImpl_->visible = true;
     
-    // TODO: Show native window
-    // if (pImpl_->hwnd) {
-    //     ShowWindow(pImpl_->hwnd, SW_SHOW);
-    //     UpdateWindow(pImpl_->hwnd);
-    // }
+    if (pImpl_->hwnd) {
+        ShowWindow(pImpl_->hwnd, SW_SHOW);
+        UpdateWindow(pImpl_->hwnd);
+    }
 }
 
 void Window::hide() noexcept {
@@ -119,10 +135,9 @@ void Window::hide() noexcept {
     
     pImpl_->visible = false;
     
-    // TODO: Hide native window
-    // if (pImpl_->hwnd) {
-    //     ShowWindow(pImpl_->hwnd, SW_HIDE);
-    // }
+    if (pImpl_->hwnd) {
+        ShowWindow(pImpl_->hwnd, SW_HIDE);
+    }
 }
 
 bool Window::isVisible() const noexcept {
@@ -134,11 +149,10 @@ bool Window::isVisible() const noexcept {
 // ============================================================================
 
 void Window::setFocus() noexcept {
-    // TODO: Set focus to native window
-    // if (pImpl_->hwnd) {
-    //     SetForegroundWindow(pImpl_->hwnd);
-    //     SetFocus(pImpl_->hwnd);
-    // }
+    if (pImpl_->hwnd) {
+        SetForegroundWindow(pImpl_->hwnd);
+        ::SetFocus(pImpl_->hwnd);
+    }
 }
 
 bool Window::hasFocus() const noexcept {
@@ -153,30 +167,27 @@ void Window::minimize() noexcept {
     pImpl_->minimized = true;
     pImpl_->maximized = false;
     
-    // TODO: Minimize native window
-    // if (pImpl_->hwnd) {
-    //     ShowWindow(pImpl_->hwnd, SW_MINIMIZE);
-    // }
+    if (pImpl_->hwnd) {
+        ShowWindow(pImpl_->hwnd, SW_MINIMIZE);
+    }
 }
 
 void Window::maximize() noexcept {
     pImpl_->maximized = true;
     pImpl_->minimized = false;
     
-    // TODO: Maximize native window
-    // if (pImpl_->hwnd) {
-    //     ShowWindow(pImpl_->hwnd, SW_MAXIMIZE);
-    // }
+    if (pImpl_->hwnd) {
+        ShowWindow(pImpl_->hwnd, SW_MAXIMIZE);
+    }
 }
 
 void Window::restore() noexcept {
     pImpl_->minimized = false;
     pImpl_->maximized = false;
     
-    // TODO: Restore native window
-    // if (pImpl_->hwnd) {
-    //     ShowWindow(pImpl_->hwnd, SW_RESTORE);
-    // }
+    if (pImpl_->hwnd) {
+        ShowWindow(pImpl_->hwnd, SW_RESTORE);
+    }
 }
 
 void Window::close() noexcept {
@@ -184,11 +195,10 @@ void Window::close() noexcept {
     
     pImpl_->closed = true;
     
-    // TODO: Close native window
-    // if (pImpl_->hwnd) {
-    //     DestroyWindow(pImpl_->hwnd);
-    //     pImpl_->hwnd = nullptr;
-    // }
+    if (pImpl_->hwnd) {
+        DestroyWindow(pImpl_->hwnd);
+        pImpl_->hwnd = nullptr;
+    }
     
     // Unregister from WindowRegistry
     WindowRegistry::instance().unregisterWindow(id_);
