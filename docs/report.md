@@ -1,4 +1,5 @@
-report 15-12-2025 --- Technical Issue Report
+report 1 - request
+15-12-2025
 1. Masalah Layar Putih (Blank Screen)
 Deskripsi: Jendela aplikasi muncul tetapi tidak menampilkan konten widget apa pun (hanya putih polos). Penyebab Teknis:
 
@@ -19,3 +20,6 @@ Missing Immediate Redraw: Fungsi Window::forceRedraw di src/core/window.cpp hany
 
 3. Tombol Close Berjalan Normal
 Analisis: Tombol Close bekerja normal karena event WM_CLOSE dan WM_DESTROY ditangani langsung oleh prosedur window (WndProc) dan mengirim pesan ke sistem event tanpa bergantung pada siklus render grafis.
+
+report 1 - fixed 
+15-12-2025

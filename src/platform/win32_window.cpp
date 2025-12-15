@@ -90,21 +90,20 @@ private:
             case WM_SIZE: {
                 UINT width = LOWORD(lp);
                 UINT height = HIWORD(lp);
-                
-                // Update window size (this also resizes renderer buffer)
-                window->setSize(widget::Size<uint32_t>(width, height));
-                
-                // FIX: Immediate redraw after resize
-                if (!pImpl->inSizeMove) {
-                    window->forceRedraw();
-                }
+                pImpl->size = widget::Size<uint32_t>(width, height);
+                pImpl->updateDirtyRectBounds(); 
+
+				if (pImpl->rootWidget) 
+					pImpl->rootWidget->setRect(window->getClientRect());
+				if (!pImpl->inSizeMove) 
+					window->forceRedraw();
                 return 0;
             }
 
             case WM_MOVE: {
                 int x = static_cast<int16_t>(LOWORD(lp));
                 int y = static_cast<int16_t>(HIWORD(lp));
-                window->setPosition(widget::Point<int32_t>(x, y));
+                pImpl->position = widget::Point<int32_t>(x, y);
                 return 0;
             }
 
@@ -123,10 +122,13 @@ private:
                 PAINTSTRUCT ps;
                 BeginPaint(hwnd, &ps);
                 
-                // FIX: Render during WM_PAINT
                 if (pImpl->renderer && pImpl->rootWidget && pImpl->visible) {
-                    pImpl->render();
-                }
+					try {
+						pImpl->render(); 
+					} catch (...) {
+						
+					}
+				}
                 
                 EndPaint(hwnd, &ps);
                 return 0;
