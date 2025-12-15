@@ -1,6 +1,6 @@
 #pragma once
 
-#include "basic_paired.hpp"
+#include "ipair.hpp"
 #include <compare>
 #include <type_traits>
 
