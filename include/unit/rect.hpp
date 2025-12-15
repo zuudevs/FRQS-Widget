@@ -20,7 +20,7 @@ template <meta::arithmetic Tp, meta::arithmetic Ts>
 struct is_rect<widget::Rect<Tp, Ts>> : std::true_type {} ;
 
 template <typename Tv>
-concept rect = is_rect<std::decay_t<Tv>>::value ;
+constexpr bool is_rect_v = is_rect<std::decay_t<Tv>>::value ;
 
 
 } // namespace frqs::meta
@@ -35,12 +35,6 @@ public :
     using size_value_t = Ts ;
     using base_point_t = Point<Tp> ; 
     using base_size_t = Size<Ts> ;
-
-private :
-    constexpr const base_point_t& pt() const noexcept { return static_cast<const base_point_t&>(*this); }
-    constexpr const base_size_t& sz() const noexcept { return static_cast<const base_size_t&>(*this); }
-    constexpr base_point_t& pt() noexcept { return static_cast<base_point_t&>(*this); }
-    constexpr base_size_t& sz() noexcept { return static_cast<base_size_t&>(*this); }
 
 public :
     constexpr Rect() noexcept = default ;
@@ -67,61 +61,61 @@ public :
     
     template <meta::arithmetic Tv>
     constexpr Rect& operator=(Tv val) noexcept {
-        pt() = val ;
-        sz() = val ;
+        getPoint() = val ;
+        getSize() = val ;
         return *this;
     }
 
     template <typename Tv>
-	requires (meta::is_paired_unit_v<Tv> || std::is_arithmetic_v<Tv> || std::is_same_v<self_t, Tv>)
+	requires (meta::is_paired_unit_v<Tv> || std::is_arithmetic_v<Tv> || meta::is_rect_v<Tv>)
     constexpr auto operator+(Tv val) const noexcept {
-		if constexpr (std::is_same_v<self_t, Tv>) 
-			return Rect(pt() + val.pt(), sz() + val.sz()) ;
+		if constexpr (meta::is_rect_v<Tv>) 
+			return Rect(getPoint() + val.getPoint(), getSize() + val.getSize()) ;
 		else if constexpr (meta::is_point_v<Tv>) 
-			return Rect(pt() + val, sz()) ;
+			return Rect(getPoint() + val, getSize()) ;
 		else if constexpr (meta::is_size_v<Tv>) 
-			return Rect(pt(), sz() + val) ;
+			return Rect(getPoint(), getSize() + val) ;
 		else
-        	return Rect(pt() + val, sz() + val) ;
+        	return Rect(getPoint() + val, getSize() + val) ;
     }
 
     template <typename Tv>
-	requires (meta::is_paired_unit_v<Tv> || std::is_arithmetic_v<Tv> || std::is_same_v<self_t, Tv>)
+	requires (meta::is_paired_unit_v<Tv> || std::is_arithmetic_v<Tv> || meta::is_rect_v<Tv>)
     constexpr auto operator-(Tv val) const noexcept {
-		if constexpr (std::is_same_v<self_t, Tv>) 
-			return Rect(pt() - val.pt(), sz() - val.sz()) ;
+		if constexpr (meta::is_rect_v<Tv>) 
+			return Rect(getPoint() - val.getPoint(), getSize() - val.getSize()) ;
 		else if constexpr (meta::is_point_v<Tv>) 
-			return Rect(pt() - val, sz()) ;
+			return Rect(getPoint() - val, getSize()) ;
 		else if constexpr (meta::is_size_v<Tv>) 
-			return Rect(pt(), sz() - val) ;
+			return Rect(getPoint(), getSize() - val) ;
 		else
-        	return Rect(pt() - val, sz() - val) ;
+        	return Rect(getPoint() - val, getSize() - val) ;
     }
 
 	template <typename Tv>
-	requires (meta::is_paired_unit_v<Tv> || std::is_arithmetic_v<Tv> || std::is_same_v<self_t, Tv>)
+	requires (meta::is_paired_unit_v<Tv> || std::is_arithmetic_v<Tv> || meta::is_rect_v<Tv>)
     constexpr auto operator*(Tv val) const noexcept {
-		if constexpr (std::is_same_v<self_t, Tv>) 
-			return Rect(pt() * val.pt(), sz() * val.sz()) ;
+		if constexpr (meta::is_rect_v<Tv>) 
+			return Rect(getPoint() * val.getPoint(), getSize() * val.getSize()) ;
 		else if constexpr (meta::is_point_v<Tv>) 
-			return Rect(pt() * val, sz()) ;
+			return Rect(getPoint() * val, getSize()) ;
 		else if constexpr (meta::is_size_v<Tv>) 
-			return Rect(pt(), sz() * val) ;
+			return Rect(getPoint(), getSize() * val) ;
 		else
-        	return Rect(pt() * val, sz() * val) ;
+        	return Rect(getPoint() * val, getSize() * val) ;
     }
 
     template <typename Tv>
-	requires (meta::is_paired_unit_v<Tv> || std::is_arithmetic_v<Tv> || std::is_same_v<self_t, Tv>)
+	requires (meta::is_paired_unit_v<Tv> || std::is_arithmetic_v<Tv> || meta::is_rect_v<Tv>)
     constexpr auto operator/(Tv val) const noexcept {
-		if constexpr (std::is_same_v<self_t, Tv>) 
-			return Rect(pt() / val.pt(), sz() / val.sz()) ;
+		if constexpr (meta::is_rect_v<Tv>) 
+			return Rect(getPoint() / val.getPoint(), getSize() / val.getSize()) ;
 		else if constexpr (meta::is_point_v<Tv>) 
-			return Rect(pt() / val, sz()) ;
+			return Rect(getPoint() / val, getSize()) ;
 		else if constexpr (meta::is_size_v<Tv>) 
-			return Rect(pt(), sz() / val) ;
+			return Rect(getPoint(), getSize() / val) ;
 		else
-        	return Rect(pt() / val, sz() / val) ;
+        	return Rect(getPoint() / val, getSize() / val) ;
     }
     
     template <meta::arithmetic Tpo, meta::arithmetic Tso>
@@ -139,8 +133,10 @@ public :
 	constexpr auto getCenterX() const noexcept { return this->x + this->w / 2 ; }
 	constexpr auto getCenterY() const noexcept { return this->y + this->h / 2 ; }
 	constexpr auto getCenter() const noexcept { return Point(getCenterX(), getCenterY()) ; }
-	constexpr auto getPoint() const noexcept { return pt() ; }
-	constexpr auto getSize() const noexcept { return sz() ; }
+	constexpr const base_point_t& getPoint() const noexcept { return static_cast<const base_point_t&>(*this); }
+    constexpr const base_size_t& getSize() const noexcept { return static_cast<const base_size_t&>(*this); }
+    constexpr base_point_t& getPoint() noexcept { return static_cast<base_point_t&>(*this); }
+    constexpr base_size_t& getSize() noexcept { return static_cast<base_size_t&>(*this); }
     
     constexpr auto intersect(const Rect& o) const noexcept {
         auto l = std::max(getLeft(), o.getLeft()) ;

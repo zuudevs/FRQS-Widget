@@ -5,6 +5,7 @@
 #include <format>
 #include <functional>
 #include <limits>
+#include <type_traits>
 #include "../meta/arithmetic.hpp"
 
 namespace frqs::widget {
@@ -43,7 +44,7 @@ struct is_size<widget::Size<Tv>>
  : std::true_type {} ;
 
 template <typename Tv>
-constexpr bool is_size_v = is_point<std::decay_t<Tv>>::value ;
+constexpr bool is_size_v = is_size<std::decay_t<Tv>>::value ;
 
 template <typename> 
 struct is_paired_unit
@@ -58,7 +59,7 @@ struct is_paired_unit<widget::Size<Tv>>
  : std::true_type {} ;
 
 template <typename Tv>
-constexpr bool is_paired_unit_v = is_paired_unit<std::decay<Tv>>::value ;
+constexpr bool is_paired_unit_v = is_paired_unit<std::decay_t<Tv>>::value ;
 
 template <typename Tv>
 concept paired_unit = is_paired_unit_v<Tv> ;
