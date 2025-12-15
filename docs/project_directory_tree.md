@@ -2,7 +2,7 @@ FRQS_WIDGET/
 ├── CMakeLists.txt
 ├── .gitignore
 ├── include/
-│   ├── frqs_widget.hpp                    # [EXISTS] but error meta/concept not implemented
+│   ├── frqs_widget.hpp                    # [EXISTS] but error core/window not implemented
 │   ├── meta/
 │   │   ├── arithmetic.hpp                 # [DELETED]
 │   │   └── concepts.hpp                   # [EXISTS]
