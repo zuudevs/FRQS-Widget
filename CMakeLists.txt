@@ -147,6 +147,7 @@ if(WIN32)
         PRIVATE
             d2d1        # Direct2D
             dwrite      # DirectWrite
+            dwmapi      # Desktop Window Manager API (for invisible borders)
     )
     
     # Define WIN32_LEAN_AND_MEAN and NOMINMAX
@@ -182,6 +183,7 @@ if(WIN32)
         PUBLIC
             d2d1
             dwrite
+            dwmapi
     )
     
     target_compile_definitions(FRQS_WIDGET_LIB

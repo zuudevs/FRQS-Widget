@@ -75,10 +75,22 @@ private:
 
     static LRESULT handleMessage(core::Window* window, HWND hwnd, UINT msg, 
                                 WPARAM wp, LPARAM lp) {
-        // Get Impl for direct access
         auto* pImpl = window->pImpl_.get();
         
         switch (msg) {
+            case WM_GETMINMAXINFO: {
+                // ✅ CRITICAL FIX: Remove size constraints
+                auto* mmi = reinterpret_cast<MINMAXINFO*>(lp);
+                
+                // Allow any size from very small to very large
+                mmi->ptMinTrackSize.x = 1;
+                mmi->ptMinTrackSize.y = 1;
+                mmi->ptMaxTrackSize.x = 32000;
+                mmi->ptMaxTrackSize.y = 32000;
+                
+                return 0;
+            }
+            
             case WM_CLOSE:
                 window->close();
                 return 0;
@@ -90,16 +102,17 @@ private:
             case WM_SIZE: {
                 UINT width = LOWORD(lp);
                 UINT height = HIWORD(lp);
-                
-                // FIX: Use centralized size handler
                 pImpl->handleSizeMessage(width, height);
                 return 0;
             }
 
             case WM_MOVE: {
-                int x = static_cast<int16_t>(LOWORD(lp));
-                int y = static_cast<int16_t>(HIWORD(lp));
-                pImpl->position = widget::Point<int32_t>(x, y);
+                // Get client area position (not window position)
+                // This accounts for invisible DWM borders
+                POINT clientTopLeft = {0, 0};
+                ClientToScreen(hwnd, &clientTopLeft);
+                
+                pImpl->position = widget::Point<int32_t>(clientTopLeft.x, clientTopLeft.y);
                 return 0;
             }
 

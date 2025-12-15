@@ -1,30 +1,26 @@
-// tests/window_test.cpp - Window Unit Tests (DEBUG VERSION)
+// tests/window_test.cpp - Window Unit Tests (FIXED VERSION)
 #include "frqs-widget.hpp"
 #include <print>
 #include <cassert>
 #include <thread>
-#include <string>     // Diperlukan untuk std::string
-#include <algorithm>  // Diperlukan untuk logika konversi
-#include <chrono>     // Diperlukan untuk std::chrono::milliseconds
+#include <string>
+#include <algorithm>
+#include <chrono>
 
 using namespace frqs;
 
 // ============================================================================
-// HELPER FUNCTIONS (Polymorphic Printing)
+// HELPER FUNCTIONS
 // ============================================================================
 
-// 1. Helper untuk std::wstring (melakukan konversi ke std::string agar bisa dicetak ke stderr)
 inline std::string print_helper(const std::wstring& ws) {
     return std::string(ws.begin(), ws.end());
 }
 
-// 2. Helper untuk wide string literals (const wchar_t*)
 inline std::string print_helper(const wchar_t* ws) {
     return print_helper(std::wstring(ws));
 }
 
-// [FIX] 3. Helper untuk tipe data dasar (angka, bool, pointer, dll)
-// Tipe ini akan diteruskan langsung karena std::println sudah mendukungnya secara native
 template <typename T>
 concept PrintableAsIs = std::is_arithmetic_v<T> || std::is_pointer_v<T>;
 
@@ -48,11 +44,9 @@ inline const T& print_helper(const T& val) {
     } g_testRegistrar_##name; \
     void test_##name()
 
-// [FIX MACRO] Menggunakan print_helper yang baru
 #define ASSERT_EQ(a, b) \
     if ((a) != (b)) { \
         std::println(stderr, "Assertion failed: {} != {}", #a, #b); \
-        /* print_helper akan memilih fungsi yang tepat: konversi string atau passthrough angka */ \
         std::println(stderr, "  Expected: {}", print_helper(b)); \
         std::println(stderr, "  Got: {}", print_helper(a)); \
         std::terminate(); \
@@ -76,7 +70,7 @@ TEST(window_creation) {
     params.title = L"Test Window";
     params.size = widget::Size(640u, 480u);
     params.position = widget::Point(50, 50);
-    params.visible = false;  // Don't show during test
+    params.visible = false;
 
     auto window = app.createWindow(params);
     
@@ -111,7 +105,13 @@ TEST(window_visibility) {
 TEST(window_resize) {
     auto& app = Application::instance();
     
-    auto window = app.createWindow();
+    // Create window and SHOW it (important for resize)
+    WindowParams params;
+    params.visible = true;  // ✅ Make visible
+    auto window = app.createWindow(params);
+    
+    // Give Windows time to fully create and display the window
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
     std::println("DEBUG: Initial size = {}x{}", window->getSize().w, window->getSize().h);
     
@@ -120,8 +120,8 @@ TEST(window_resize) {
     
     window->setSize(newSize);
     
-    // Give Windows time to process messages
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // Give Windows time to process resize
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
     
     auto actualSize = window->getSize();
     std::println("DEBUG: Actual size after setSize = {}x{}", actualSize.w, actualSize.h);
@@ -209,7 +209,6 @@ TEST(window_registry) {
     window1->close();
     window2->close();
     
-    // Memberikan waktu untuk registry membersihkan diri
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     
     ASSERT_EQ(registry.getWindowCount(), initialCount);
@@ -245,10 +244,8 @@ int main() {
     std::println("=== FRQS-Widget Window Tests ===\n");
     
     try {
-        // Tests are automatically registered and run by static initializers
         std::println("\n=== All tests passed! ===");
         return 0;
-        
     } catch (const std::exception& e) {
         std::println(stderr, "\nTest failed with exception: {}", e.what());
         return 1;

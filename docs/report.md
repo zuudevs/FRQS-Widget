@@ -206,3 +206,44 @@ Assertion failed: actualSize.h != newSize.h
   Expected: 768
   Got: 701
 
+report 2 - fixed
+16-12-2025
+✅ SELESAI - Semua issues sudah diperbaiki
+Running test: window_creation
+✓ Test passed: window_creation
+
+Running test: window_visibility
+✓ Test passed: window_visibility
+
+Running test: window_resize
+DEBUG: Initial size = 800x600
+DEBUG: Requesting size = 1024x768
+=== setSize(1024, 768) ===
+Target window size: 1040x807
+Result: client=1024x768, error=0x0
+=== Final size: 1024x768 ===
+
+DEBUG: Actual size after setSize = 1024x768
+✓ Test passed: window_resize
+
+Running test: window_position
+setPosition: target=(200, 100), offset=(8, 31), adjusted=(192, 69)
+  Actual position: (200, 100)
+✓ Test passed: window_position
+
+Running test: window_client_rect
+✓ Test passed: window_client_rect
+
+Running test: window_widget_tree
+✓ Test passed: window_widget_tree
+
+Running test: window_registry
+✓ Test passed: window_registry
+
+Running test: multiple_windows
+✓ Test passed: multiple_windows
+
+=== FRQS-Widget Window Tests ===
+
+
+=== All tests passed! ===
