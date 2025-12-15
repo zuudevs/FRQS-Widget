@@ -54,11 +54,6 @@ FRQS_WIDGET/
 ├── tests/
 │   ├── unit_test.cpp                      # [EXISTS]
 │   ├── window_test.cpp					   # [EXISTS]
-│   └── event_test.cpp					   # [EXISTS] see error msg (1)
+│   └── event_test.cpp					   # [EXISTS]
 └── examples/
     └── hello_window.cpp				   # [EXISTS]
-
-error msg :
-
-(1)
-- Use of undeclared identifier 'ModifierKey'

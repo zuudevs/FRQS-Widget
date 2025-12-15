@@ -23,3 +23,16 @@ Analisis: Tombol Close bekerja normal karena event WM_CLOSE dan WM_DESTROY ditan
 
 report 1 - fixed 
 15-12-2025
+
+report 2 - request
+15-12-2025
+hasil dari tests\window_test.cpp
+D:\Project\Fast Realibility Query System\FRQS Widget\build>"D:/Project/Fast Realibility Query System/FRQS Widget/build/window_test.exe"
+Running test: window_creation
+✓ Test passed: window_creation
+
+Running test: window_visibility
+✓ Test passed: window_visibility
+
+Running test: window_resize
+Assertion failed: actualSize.h != newSize.h

@@ -1,5 +1,6 @@
 // tests/event_test.cpp - Event System Unit Tests
-#include "frqs-widget.hpp"
+#include "../include/frqs-widget.hpp"
+#include "../include/event/event_types.hpp"
 #include <print>
 #include <cassert>
 #include <chrono>

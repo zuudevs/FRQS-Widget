@@ -200,6 +200,7 @@ endif()
 option(BUILD_TESTS "Build test executables" ON)
 
 if(BUILD_TESTS)
+    # Unit test for basic types (Point, Size, Rect)
     add_executable(unit_tests
         tests/unit_test.cpp
     )
@@ -210,6 +211,59 @@ if(BUILD_TESTS)
     )
     
     target_include_directories(unit_tests
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+    
+    # Window system test
+    add_executable(window_test
+        tests/window_test.cpp
+    )
+    
+    target_link_libraries(window_test
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+    
+    target_include_directories(window_test
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+    
+    # Event system test
+    add_executable(event_test
+        tests/event_test.cpp
+    )
+    
+    target_link_libraries(event_test
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+    
+    target_include_directories(event_test
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+endif()
+
+# ============================================================================
+# EXAMPLES
+# ============================================================================
+
+option(BUILD_EXAMPLES "Build example executables" ON)
+
+if(BUILD_EXAMPLES)
+    # Hello Window Example
+    add_executable(hello_window
+        examples/hello_window.cpp
+    )
+    
+    target_link_libraries(hello_window
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+    
+    target_include_directories(hello_window
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
@@ -263,6 +317,7 @@ message(STATUS "C++ Standard: C++${CMAKE_CXX_STANDARD}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
 message(STATUS "Build Tests: ${BUILD_TESTS}")
+message(STATUS "Build Examples: ${BUILD_EXAMPLES}")
 message(STATUS "========================================")
 message(STATUS "Implementation Status:")
 message(STATUS "  ✓ Headers: Complete")
@@ -271,4 +326,15 @@ message(STATUS "  ✓ Window: Implemented")
 message(STATUS "  ✓ Application: Implemented")
 message(STATUS "  ✓ Renderer: Implemented (Direct2D)")
 message(STATUS "  ✓ Platform: Implemented (Win32)")
+message(STATUS "========================================")
+message(STATUS "Executables:")
+message(STATUS "  - FRQS_WIDGET (main demo)")
+if(BUILD_TESTS)
+message(STATUS "  - unit_tests")
+message(STATUS "  - window_test")
+message(STATUS "  - event_test")
+endif()
+if(BUILD_EXAMPLES)
+message(STATUS "  - hello_window")
+endif()
 message(STATUS "========================================")
