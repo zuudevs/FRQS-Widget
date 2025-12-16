@@ -318,3 +318,38 @@ D:\Project\Fast Realibility Query System\FRQS Widget\build>
 problems :
 - text input when user input character force closed.
 - slider no updating thumb position, but when im moving window, thumb moved
+
+report 5 - progress
+17-12-2025
+
+D:\Project\Fast Realibility Query System\FRQS Widget\build>"D:/Project/Fast Realibility Query System/FRQS Widget/build/widget_demo.exe"  
+=== FRQS-Widget: Comprehensive Widget Demo ===
+
+✓ Demo window created
+Try out all the widgets!
+Close the window to exit.
+
+Success button clicked!
+Primary button clicked!
+Danger button clicked!
+Slider value: 49.0
+Slider value: 49.0
+Slider value: 45.0
+Slider value: 44.0
+Slider value: 42.0
+Slider value: 41.0
+Slider value: 40.0
+Slider value: 38.0
+Slider value: 37.0
+
+[x] Button clicks → onClick callback fires + status update
+[x] Button hover → color changes (Normal → Hovered → Pressed)
+[x] Slider drag → value changes smoothly + onValueChanged fires
+[x] Slider track click → jump to value
+[x] TextInput focus → border color changes
+[] TextInput typing → characters appear + onTextChanged fires
+[] TextInput Enter → onEnter callback fires
+[] Arrow keys, Home/End → cursor navigation
+
+problems :
+- text input when user input character force closed.
