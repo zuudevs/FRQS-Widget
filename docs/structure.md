@@ -23,9 +23,14 @@ FRQS_WIDGET/
 │   │   ├── event_bus.hpp                  # [EXISTS]
 │   │   └── event_types.hpp                # [EXISTS]
 │   ├── widget/
+│   │   ├── button.hpp                     # [EXISTS]
+│   │   ├── container.hpp                  # [EXISTS]
 │   │   ├── iwidget.hpp                    # [EXISTS]
-│   │   ├── widget.hpp                     # [EXISTS]
-│   │   └── layout.hpp                     # [EXISTS]
+│   │   ├── label.hpp                      # [EXISTS]
+│   │   ├── layout.hpp                     # [EXISTS]
+│   │   ├── slider.hpp                     # [EXISTS]
+│   │   ├── text_input.hpp                 # [EXISTS]
+│   │   └── widget.hpp                     # [EXISTS]
 │   ├── render/
 │   │   ├── renderer.hpp                   # [EXISTS]
 │   │   ├── render_context.hpp             # [EXISTS]
@@ -43,6 +48,11 @@ FRQS_WIDGET/
 │   │   ├── event_bus.cpp				   # [EXISTS]
 │   │   └── event_dispatcher.cpp		   # [EXISTS]
 │   ├── widget/
+│   │   ├── button.cpp					   # [EXISTS]
+│   │   ├── container.cpp				   # [EXISTS]
+│   │   ├── label.cpp					   # [EXISTS]
+│   │   ├── slider.cpp					   # [EXISTS]
+│   │   ├── text_input.cpp				   # [EXISTS]
 │   │   └── widget.cpp					   # [EXISTS]
 │   ├── render/
 │   │   ├── renderer_d2d.hpp			   # [EXISTS]
