@@ -1,7 +1,8 @@
-#include "../../include/platform/win32_safe.hpp"
-#include "../../include/core/window.hpp"
-#include "../../include/core/application.hpp"
-#include "../core/window_impl.hpp"
+#include "platform/win32_safe.hpp"
+#include "core/window.hpp"
+#include "core/application.hpp"
+#include "core/window_impl.hpp"
+#include "event/event_types.hpp"
 #include <unordered_map>
 #include <mutex>
 
@@ -156,21 +157,129 @@ private:
                 pImpl->focused = false;
                 return 0;
 
-            case WM_KEYDOWN:
-            case WM_KEYUP:
-            case WM_SYSKEYDOWN:
-            case WM_SYSKEYUP:
-                // TODO: Dispatch keyboard events
-                return 0;
+            case WM_KEYDOWN :
+            case WM_KEYUP :
+            case WM_SYSKEYDOWN :
+            case WM_SYSKEYUP :{
+                if (!pImpl->rootWidget) return 0;
+                
+                event::KeyEvent::Action action;
+                if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) {
+                    // Check if this is a repeat
+                    bool isRepeat = (lp & (1 << 30)) != 0;
+                    action = isRepeat ? event::KeyEvent::Action::Repeat : event::KeyEvent::Action::Press;
+                } else {
+                    action = event::KeyEvent::Action::Release;
+                }
+                
+                uint32_t keyCode = static_cast<uint32_t>(wp);
+                uint32_t mods = 0;
+                if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
+                if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
+                if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
+                
+                event::KeyEvent evt{
+                    .keyCode = keyCode,
+                    .action = action,
+                    .modifiers = mods,
+                    .timestamp = static_cast<uint64_t>(GetTickCount64())
+                };
+                
+                event::Event e = evt;
+                bool handled = pImpl->rootWidget->onEvent(e);
+                
+                // If handled by widget, don't pass to DefWindowProc
+                if (handled) return 0;
+                break;
+            }
 
-            case WM_LBUTTONDOWN:
-            case WM_LBUTTONUP:
-            case WM_RBUTTONDOWN:
-            case WM_RBUTTONUP:
-            case WM_MBUTTONDOWN:
-            case WM_MBUTTONUP:
-            case WM_MOUSEMOVE:
-            case WM_MOUSEWHEEL:
+            case WM_LBUTTONDOWN : 
+            case WM_RBUTTONDOWN : 
+            case WM_MBUTTONDOWN : {
+                if (!pImpl->rootWidget) return 0;
+                
+                event::MouseButtonEvent::Button btn;
+                if (msg == WM_LBUTTONDOWN) btn = event::MouseButtonEvent::Button::Left;
+                else if (msg == WM_RBUTTONDOWN) btn = event::MouseButtonEvent::Button::Right;
+                else btn = event::MouseButtonEvent::Button::Middle;
+                
+                int32_t x = GET_X_LPARAM(lp);
+                int32_t y = GET_Y_LPARAM(lp);
+                uint32_t mods = 0;
+                if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
+                if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
+                if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
+                
+                event::MouseButtonEvent evt{
+                    .button = btn,
+                    .action = event::MouseButtonEvent::Action::Press,
+                    .position = widget::Point<int32_t>(x, y),
+                    .modifiers = mods,
+                    .timestamp = static_cast<uint64_t>(GetTickCount64())
+                };
+                
+                event::Event e = evt;
+                pImpl->rootWidget->onEvent(e);
+                return 0;
+            }
+
+			case WM_LBUTTONUP : 
+			case WM_RBUTTONUP : 
+            case WM_MBUTTONUP : {
+                if (!pImpl->rootWidget) return 0;
+                
+                event::MouseButtonEvent::Button btn;
+                if (msg == WM_LBUTTONUP) btn = event::MouseButtonEvent::Button::Left;
+                else if (msg == WM_RBUTTONUP) btn = event::MouseButtonEvent::Button::Right;
+                else btn = event::MouseButtonEvent::Button::Middle;
+                
+                int32_t x = GET_X_LPARAM(lp);
+                int32_t y = GET_Y_LPARAM(lp);
+                uint32_t mods = 0;
+                if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
+                if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
+                if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
+                
+                event::MouseButtonEvent evt{
+                    .button = btn,
+                    .action = event::MouseButtonEvent::Action::Release,
+                    .position = widget::Point<int32_t>(x, y),
+                    .modifiers = mods,
+                    .timestamp = static_cast<uint64_t>(GetTickCount64())
+                };
+                
+                event::Event e = evt;
+                pImpl->rootWidget->onEvent(e);
+                return 0;
+            }
+
+            case WM_MOUSEMOVE : {
+                if (!pImpl->rootWidget) return 0;
+                
+                static widget::Point<int32_t> lastPos(0, 0);
+                
+                int32_t x = GET_X_LPARAM(lp);
+                int32_t y = GET_Y_LPARAM(lp);
+                uint32_t mods = 0;
+                if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
+                if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
+                if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
+                
+                event::MouseMoveEvent evt{
+                    .position = widget::Point<int32_t>(x, y),
+                    .delta = widget::Point<int32_t>(x - lastPos.x, y - lastPos.y),
+                    .modifiers = mods,
+                    .timestamp = static_cast<uint64_t>(GetTickCount64())
+                };
+                
+                lastPos = evt.position;
+                
+                event::Event e = evt;
+                pImpl->rootWidget->onEvent(e);
+                return 0;
+            }
+
+            case WM_MOUSEWHEEL : 
                 // TODO: Dispatch mouse events
                 return 0;
 

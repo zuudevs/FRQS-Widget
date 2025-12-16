@@ -274,3 +274,47 @@ Demo ended successfully.
 
 widget masih blm bisa menerima input, namun masih bisa tampil
 slider tidak bisa di click atau digeser, button juga sama, textinput pun juga sama
+
+report 4 - fixed
+16-12-2025
+
+report 5 - request
+16-12-2025
+D:\Project\Fast Realibility Query System\FRQS Widget\build>"D:/Project/Fast Realibility Query System/FRQS Widget/build/widget_demo.exe"
+=== FRQS-Widget: Comprehensive Widget Demo ===
+
+✓ Demo window created
+Try out all the widgets!
+Close the window to exit.
+
+Primary button clicked!
+Success button clicked!
+Danger button clicked!
+Slider value: 50.0
+Slider value: 49.0
+Slider value: 46.0
+Slider value: 42.0
+Slider value: 39.0
+Slider value: 37.0
+Slider value: 37.0
+Slider value: 37.0
+Slider value: 37.0
+Slider value: 36.0
+Slider value: 36.0
+Slider value: 36.0
+Slider value: 36.0
+
+D:\Project\Fast Realibility Query System\FRQS Widget\build>
+
+[x] Button clicks → onClick callback fires + status update
+[] Button hover → color changes (Normal → Hovered → Pressed)
+[x] Slider drag → value changes smoothly + onValueChanged fires
+[x] Slider track click → jump to value
+[] TextInput focus → border color changes
+[] TextInput typing → characters appear + onTextChanged fires
+[] TextInput Enter → onEnter callback fires
+[] Arrow keys, Home/End → cursor navigation
+
+problems :
+- text input when user input character force closed.
+- slider no updating thumb position, but when im moving window, thumb moved
