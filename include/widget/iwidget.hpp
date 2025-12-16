@@ -14,6 +14,10 @@ class IWidget;
 class Widget;
 class Renderer;
 
+namespace internal {
+	void setWidgetWindowHandle(Widget*, void*) ;
+}
+
 // ============================================================================
 // WIDGET INTERFACE (Virtual for polymorphism at high level ONLY)
 // ============================================================================
@@ -88,6 +92,8 @@ public:
     // Invalidate rect (mark dirty for repainting)
     void invalidate() noexcept;
     void invalidateRect(const Rect<int32_t, uint32_t>& rect) noexcept;
+
+	friend void internal::setWidgetWindowHandle(Widget* widget, void* hwnd) ;
 };
 
 // ============================================================================

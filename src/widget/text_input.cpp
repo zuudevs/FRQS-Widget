@@ -298,6 +298,8 @@ bool TextInput::handleMouseMove(const event::MouseMoveEvent& evt) {
     return false;
 }
 
+// src/widget/text_input.cpp - FIXED handleKeyEvent method
+
 bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
     if (!focused_ || !enabled_) return false;
     if (evt.action != event::KeyEvent::Action::Press && 
@@ -307,9 +309,38 @@ bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
     
     bool ctrl = (evt.modifiers & static_cast<uint32_t>(event::ModifierKey::Control)) != 0;
     bool shift = (evt.modifiers & static_cast<uint32_t>(event::ModifierKey::Shift)) != 0;
+    bool isCharEvent = (evt.modifiers & 0x80000000) != 0; // Check if this is WM_CHAR
     
     using KC = event::KeyCode;
     
+    // ✅ FIX: Handle WM_CHAR messages (actual character input)
+    if (isCharEvent) {
+        wchar_t ch = static_cast<wchar_t>(evt.keyCode & 0x7FFFFFFF);
+        
+        // Handle special characters
+        if (ch == L'\r') {
+            // Enter key
+            if (onEnter_) {
+                onEnter_(text_);
+            }
+            return true;
+        } else if (ch == L'\b') {
+            // Backspace
+            deleteChar(false);
+            return true;
+        } else if (ch == L'\t') {
+            // Tab - could be used for focus navigation
+            return false; // Let parent handle it
+        } else if (ch >= 32) {
+            // Printable character
+            insertText(std::wstring(1, ch));
+            return true;
+        }
+        
+        return false;
+    }
+    
+    // ✅ Handle navigation keys (WM_KEYDOWN)
     switch (static_cast<KC>(evt.keyCode)) {
         case KC::Left:
             moveCursor(-1, shift);
@@ -320,31 +351,31 @@ bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
             return true;
             
         case KC::Home:
-            cursorPos_ = 0;
-            if (!shift) clearSelection();
-            else { selectionStart_ = text_.length(); hasSelection_ = true; }
+            if (shift) {
+                selectionStart_ = cursorPos_;
+                cursorPos_ = 0;
+                hasSelection_ = (selectionStart_ != cursorPos_);
+            } else {
+                cursorPos_ = 0;
+                clearSelection();
+            }
             invalidate();
             return true;
             
         case KC::End:
-            cursorPos_ = text_.length();
-            if (!shift) clearSelection();
-            else { selectionStart_ = 0; hasSelection_ = true; }
+            if (shift) {
+                selectionStart_ = cursorPos_;
+                cursorPos_ = text_.length();
+                hasSelection_ = (selectionStart_ != cursorPos_);
+            } else {
+                cursorPos_ = text_.length();
+                clearSelection();
+            }
             invalidate();
-            return true;
-            
-        case KC::Back:
-            deleteChar(false);
             return true;
             
         case KC::Delete:
             deleteChar(true);
-            return true;
-            
-        case KC::Return:
-            if (onEnter_) {
-                onEnter_(text_);
-            }
             return true;
             
         case KC::A:
@@ -376,19 +407,6 @@ bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
             break;
             
         default:
-            // Handle character input
-            if (evt.keyCode >= static_cast<uint32_t>(KC::Space) && 
-                evt.keyCode <= static_cast<uint32_t>(KC::Z)) {
-                wchar_t ch = static_cast<wchar_t>(evt.keyCode);
-                
-                // Simple character conversion (uppercase by default)
-                if (!shift && ch >= L'A' && ch <= L'Z') {
-                    ch += L'a' - L'A';  // Convert to lowercase
-                }
-                
-                insertText(std::wstring(1, ch));
-                return true;
-            }
             break;
     }
     

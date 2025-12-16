@@ -1,5 +1,6 @@
+#include "widget/internal.hpp"
 #include "window_impl.hpp"
-#include "../../include/core/window_registry.hpp"
+#include "core/window_registry.hpp"
 
 #ifdef _DEBUG
 #include <print>
@@ -7,6 +8,10 @@
 
 namespace frqs::platform {
     HWND createNativeWindow(const core::WindowParams& params, void* windowPtr);
+}
+
+namespace frqs::widget::internal {
+    void setWidgetWindowHandle(Widget* widget, void* hwnd);
 }
 
 namespace frqs::core {
@@ -318,6 +323,12 @@ void Window::setRootWidget(std::shared_ptr<widget::IWidget> root) {
     pImpl_->rootWidget = std::move(root);
     if (pImpl_->rootWidget) {
         pImpl_->rootWidget->setRect(getClientRect());
+        
+        // Set window handle for proper invalidation
+        if (auto* rootAsWidget = dynamic_cast<widget::Widget*>(pImpl_->rootWidget.get())) {
+            widget::internal::setWidgetWindowHandle(rootAsWidget, pImpl_->hwnd);
+        }
+        
         invalidate();
     }
 }

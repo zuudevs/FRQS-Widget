@@ -78,11 +78,12 @@ set(HEADERS_PUBLIC
     include/widget/iwidget.hpp
     include/widget/widget.hpp
     include/widget/layout.hpp
-    include/widget/button.hpp         # <-- New Widget Header
-    include/widget/container.hpp      # <-- New Widget Header
-    include/widget/label.hpp          # <-- New Widget Header
-    include/widget/slider.hpp         # <-- New Widget Header
-    include/widget/text_input.hpp     # <-- New Widget Header
+    include/widget/button.hpp
+    include/widget/container.hpp
+    include/widget/label.hpp
+    include/widget/slider.hpp
+    include/widget/text_input.hpp
+	include/widget/internal.hpp
     
     # Render
     include/render/dirty_rect.hpp

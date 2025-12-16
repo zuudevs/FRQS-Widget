@@ -1,4 +1,6 @@
-#include "../include/widget/iwidget.hpp"
+#include "widget/iwidget.hpp"
+#include "core/window.hpp"
+#include "platform/win32_safe.hpp"
 #include <algorithm>
 
 namespace frqs::widget {
@@ -13,8 +15,19 @@ struct Widget::Impl {
     bool visible = true;
     IWidget* parent = nullptr;
     std::vector<std::shared_ptr<IWidget>> children;
-
+    HWND windowHandle = nullptr;
     Impl() = default;
+    
+    HWND getWindowHandle() {
+        if (windowHandle) return windowHandle;
+        if (parent) {
+            if (auto* parentWidget = dynamic_cast<Widget*>(parent)) {
+                return parentWidget->pImpl_->getWindowHandle();
+            }
+        }
+        
+        return nullptr;
+    }
 };
 
 // ============================================================================
@@ -95,12 +108,12 @@ void Widget::render(Renderer& renderer) {
 void Widget::addChild(std::shared_ptr<IWidget> child) {
     if (!child) return;
 
-    // Remove from previous parent if any
     if (auto* childWidget = dynamic_cast<Widget*>(child.get())) {
         if (childWidget->pImpl_->parent) {
             childWidget->pImpl_->parent->removeChild(child.get());
         }
         childWidget->pImpl_->parent = this;
+        childWidget->pImpl_->windowHandle = pImpl_->getWindowHandle();  // NEW!
     }
 
     pImpl_->children.push_back(std::move(child));
@@ -116,6 +129,7 @@ void Widget::removeChild(IWidget* child) {
     if (it != pImpl_->children.end()) {
         if (auto* childWidget = dynamic_cast<Widget*>(child)) {
             childWidget->pImpl_->parent = nullptr;
+            childWidget->pImpl_->windowHandle = nullptr;  // NEW!
         }
         pImpl_->children.erase(it);
         invalidate();
@@ -146,17 +160,49 @@ Color Widget::getBackgroundColor() const noexcept {
 }
 
 // ============================================================================
-// INVALIDATION (Placeholder - needs Window integration)
+// INVALIDATION - ✅ FIXED: Actually trigger window redraw
 // ============================================================================
 
 void Widget::invalidate() noexcept {
-    // TODO: Notify parent window to mark this rect as dirty
-    // For now, just a placeholder
+    HWND hwnd = pImpl_->getWindowHandle();
+    if (!hwnd) return;
+    
+    auto rect = pImpl_->rect;
+    RECT r = {
+        static_cast<LONG>(rect.x),
+        static_cast<LONG>(rect.y),
+        static_cast<LONG>(rect.getRight()),
+        static_cast<LONG>(rect.getBottom())
+    };
+    
+    InvalidateRect(hwnd, &r, FALSE);
 }
 
 void Widget::invalidateRect(const Rect<int32_t, uint32_t>& rect) noexcept {
-    // TODO: Notify parent window to mark specific rect as dirty
-    (void)rect;
+    HWND hwnd = pImpl_->getWindowHandle();
+    if (!hwnd) return;
+    
+    RECT r = {
+        static_cast<LONG>(rect.x),
+        static_cast<LONG>(rect.y),
+        static_cast<LONG>(rect.getRight()),
+        static_cast<LONG>(rect.getBottom())
+    };
+    
+    InvalidateRect(hwnd, &r, FALSE);
+}
+
+namespace internal {
+    void setWidgetWindowHandle(Widget* widget, void* hwnd) {
+        if (!widget) return;
+        widget->pImpl_->windowHandle = static_cast<HWND>(hwnd);
+        
+        for (auto& child : widget->pImpl_->children) {
+            if (auto* childWidget = dynamic_cast<Widget*>(child.get())) {
+                setWidgetWindowHandle(childWidget, hwnd);
+            }
+        }
+    }
 }
 
 } // namespace frqs::widget

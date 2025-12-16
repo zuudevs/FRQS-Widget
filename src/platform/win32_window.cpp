@@ -282,6 +282,36 @@ private:
             case WM_MOUSEWHEEL : 
                 // TODO: Dispatch mouse events
                 return 0;
+			
+			case WM_CHAR: {
+				if (!pImpl->rootWidget) return 0;
+				
+				wchar_t character = static_cast<wchar_t>(wp);
+				
+				// Ignore control characters except tab, enter, backspace
+				if (character < 32 && character != L'\t' && character != L'\r' && character != L'\b') {
+					return 0;
+				}
+				
+				// Create a text input event (we'll use KeyEvent with special flag)
+				// For now, create a synthetic KeyEvent that widgets can recognize as character input
+				uint32_t mods = 0;
+				if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
+				if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
+				if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
+				
+				// Store character in keyCode (this is a hack but works for our use case)
+				event::KeyEvent evt{
+					.keyCode = static_cast<uint32_t>(character),
+					.action = event::KeyEvent::Action::Press,
+					.modifiers = mods | 0x80000000, // Set high bit to indicate this is WM_CHAR
+					.timestamp = static_cast<uint64_t>(GetTickCount64())
+				};
+				
+				event::Event e = evt;
+				pImpl->rootWidget->onEvent(e);
+				return 0;
+			}
 
             default:
                 return DefWindowProcW(hwnd, msg, wp, lp);
