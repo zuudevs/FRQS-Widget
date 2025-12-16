@@ -247,3 +247,30 @@ Running test: multiple_windows
 
 
 === All tests passed! ===
+
+report 3 - request
+16-12-2025
+D:\Project\Fast Realibility Query System\FRQS Widget\build>"D:/Project/Fast Realibility Query System/FRQS Widget/build/widget_demo.exe"
+=== FRQS-Widget: Comprehensive Widget Demo ===
+
+✓ Demo window created
+Try out all the widgets!
+Close the window to exit.
+
+
+Demo ended successfully.
+
+D:\Project\Fast Realibility Query System\FRQS Widget\build>"D:/Project/Fast Realibility Query System/FRQS Widget/build/widget_demo.exe"
+=== FRQS-Widget: Comprehensive Widget Demo ===
+
+✓ Demo window created
+Try out all the widgets!
+Close the window to exit.
+
+
+Demo ended successfully.
+
+---
+
+widget masih blm bisa menerima input, namun masih bisa tampil
+slider tidak bisa di click atau digeser, button juga sama, textinput pun juga sama

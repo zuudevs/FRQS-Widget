@@ -31,6 +31,7 @@ if(MSVC)
     add_compile_options(/MP)  # Multi-processor compilation
     
 else()
+   
     add_compile_options(
         -Wall
         -Wextra
@@ -77,6 +78,11 @@ set(HEADERS_PUBLIC
     include/widget/iwidget.hpp
     include/widget/widget.hpp
     include/widget/layout.hpp
+    include/widget/button.hpp         # <-- New Widget Header
+    include/widget/container.hpp      # <-- New Widget Header
+    include/widget/label.hpp          # <-- New Widget Header
+    include/widget/slider.hpp         # <-- New Widget Header
+    include/widget/text_input.hpp     # <-- New Widget Header
     
     # Render
     include/render/dirty_rect.hpp
@@ -109,6 +115,11 @@ set(SOURCES_IMPL
     
     # Widget
     src/widget/widget.cpp
+    src/widget/button.cpp             # <-- New Widget Source
+    src/widget/container.cpp          # <-- New Widget Source
+    src/widget/label.cpp              # <-- New Widget Source
+    src/widget/slider.cpp             # <-- New Widget Source
+    src/widget/text_input.cpp         # <-- New Widget Source
     
     # Render
     src/render/renderer_d2d.cpp
@@ -266,6 +277,20 @@ if(BUILD_EXAMPLES)
     )
     
     target_include_directories(hello_window
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+
+	add_executable(widget_demo
+        examples/widget_demo.cpp
+    )
+    
+    target_link_libraries(widget_demo
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+    
+    target_include_directories(widget_demo
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
