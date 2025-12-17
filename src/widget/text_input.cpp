@@ -14,6 +14,9 @@ struct TextInput::Impl {
     Point<int32_t> lastMousePos;
     bool mouseDown = false;
     
+    // Cache renderer pointer for text measurement
+    render::IExtendedRenderer* extRenderer = nullptr;
+    
     Impl() : lastBlinkTime(std::chrono::steady_clock::now()) {}
 };
 
@@ -260,12 +263,27 @@ void TextInput::clampCursor() {
     cursorPos_ = std::min(cursorPos_, text_.length());
 }
 
+// ============================================================================
+// ✅ FIXED: Use DirectWrite text metrics for accurate positioning
+// ============================================================================
+
 size_t TextInput::getCursorPosFromPoint(const Point<int32_t>& point) const {
     auto rect = getRect();
     int32_t relX = point.x - rect.x - static_cast<int32_t>(padding_);
     
     if (relX <= 0) return 0;
     
+    // ✅ Try to use extended renderer for accurate hit testing
+    if (pImpl_->extRenderer) {
+        size_t pos = pImpl_->extRenderer->getCharPositionFromX(
+            text_, 
+            static_cast<float>(relX),
+            font_
+        );
+        return std::min(pos, text_.length());
+    }
+    
+    // ❌ Fallback to rough estimation (8px per char)
     size_t pos = static_cast<size_t>(relX / 8);
     return std::min(pos, text_.length());
 }
@@ -464,6 +482,11 @@ void TextInput::render(Renderer& renderer) {
     if (!isVisible()) return;
 
     try {
+        // ✅ Cache extended renderer pointer for text measurement
+        if (!pImpl_->extRenderer) {
+            pImpl_->extRenderer = dynamic_cast<render::IExtendedRenderer*>(&renderer);
+        }
+        
         auto rect = getRect();
         
         // Background
@@ -494,8 +517,21 @@ void TextInput::render(Renderer& renderer) {
             size_t start = std::min(selectionStart_, cursorPos_);
             size_t end = std::max(selectionStart_, cursorPos_);
             
-            int32_t selX = textRect.x + static_cast<int32_t>(start * 8);
-            uint32_t selW = static_cast<uint32_t>((end - start) * 8);
+            // ✅ Use accurate text measurement for selection
+            float selStartX = 0.0f;
+            float selEndX = 0.0f;
+            
+            if (pImpl_->extRenderer) {
+                selStartX = pImpl_->extRenderer->measureTextWidth(text_, start, font_);
+                selEndX = pImpl_->extRenderer->measureTextWidth(text_, end, font_);
+            } else {
+                // Fallback
+                selStartX = static_cast<float>(start * 8);
+                selEndX = static_cast<float>(end * 8);
+            }
+            
+            int32_t selX = textRect.x + static_cast<int32_t>(selStartX);
+            uint32_t selW = static_cast<uint32_t>(selEndX - selStartX);
             
             Rect<int32_t, uint32_t> selRect(selX, textRect.y, selW, textRect.h);
             renderer.fillRect(selRect, selectionColor_);
@@ -530,9 +566,25 @@ void TextInput::render(Renderer& renderer) {
             }
         }
         
-        // Render cursor
+        // ============================================================
+        // ✅ FIXED: Render cursor using accurate text measurement
+        // ============================================================
         if (focused_ && cursorVisible_) {
-            int32_t cursorX = textRect.x + static_cast<int32_t>(cursorPos_ * 8);
+            float cursorXOffset = 0.0f;
+            
+            // Use DirectWrite to measure text width up to cursor position
+            if (pImpl_->extRenderer && cursorPos_ > 0) {
+                cursorXOffset = pImpl_->extRenderer->measureTextWidth(
+                    text_, 
+                    cursorPos_, 
+                    font_
+                );
+            } else if (cursorPos_ > 0) {
+                // ❌ Fallback (inaccurate)
+                cursorXOffset = static_cast<float>(cursorPos_ * 8);
+            }
+            
+            int32_t cursorX = textRect.x + static_cast<int32_t>(cursorXOffset);
             
             Rect<int32_t, uint32_t> cursorRect(
                 cursorX, 

@@ -385,6 +385,130 @@ void RendererD2D::setTransform(float m11, float m12, float m21, float m22,
 }
 
 // ============================================================================
+// TEXT MEASUREMENT IMPLEMENTATION (NEW!)
+// ============================================================================
+
+float RendererD2D::measureTextWidth(
+    const std::wstring& text, 
+    size_t length,
+    const FontStyle& font
+) const {
+    if (!writeFactory_ || text.empty() || length == 0) return 0.0f;
+    
+    // Clamp length
+    length = std::min(length, text.length());
+    
+    // Create text format for measurement
+    IDWriteTextFormat* textFormat = nullptr;
+    HRESULT hr = writeFactory_->CreateTextFormat(
+        font.family.c_str(),
+        nullptr,
+        font.bold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL,
+        font.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
+        DWRITE_FONT_STRETCH_NORMAL,
+        font.size,
+        L"en-us",
+        &textFormat
+    );
+    
+    if (FAILED(hr)) return 0.0f;
+    
+    // Create text layout for precise measurement
+    IDWriteTextLayout* textLayout = nullptr;
+    hr = writeFactory_->CreateTextLayout(
+        text.c_str(),
+        static_cast<UINT32>(length),  // Only measure up to position
+        textFormat,
+        10000.0f,  // Max width (large enough)
+        100.0f,    // Max height
+        &textLayout
+    );
+    
+    textFormat->Release();
+    
+    if (FAILED(hr)) return 0.0f;
+    
+    // Get text metrics
+    DWRITE_TEXT_METRICS metrics;
+    hr = textLayout->GetMetrics(&metrics);
+    
+    float width = 0.0f;
+    if (SUCCEEDED(hr)) {
+        width = metrics.width;
+    }
+    
+    textLayout->Release();
+    
+    return width;
+}
+
+size_t RendererD2D::getCharPositionFromX(
+    const std::wstring& text,
+    float x,
+    const FontStyle& font
+) const {
+    if (!writeFactory_ || text.empty() || x <= 0.0f) return 0;
+    
+    // Create text format
+    IDWriteTextFormat* textFormat = nullptr;
+    HRESULT hr = writeFactory_->CreateTextFormat(
+        font.family.c_str(),
+        nullptr,
+        font.bold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL,
+        font.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
+        DWRITE_FONT_STRETCH_NORMAL,
+        font.size,
+        L"en-us",
+        &textFormat
+    );
+    
+    if (FAILED(hr)) return 0;
+    
+    // Create text layout
+    IDWriteTextLayout* textLayout = nullptr;
+    hr = writeFactory_->CreateTextLayout(
+        text.c_str(),
+        static_cast<UINT32>(text.length()),
+        textFormat,
+        10000.0f,
+        100.0f,
+        &textLayout
+    );
+    
+    textFormat->Release();
+    
+    if (FAILED(hr)) return 0;
+    
+    // Hit test to find character position
+    BOOL isTrailingHit = FALSE;
+    BOOL isInside = FALSE;
+    DWRITE_HIT_TEST_METRICS hitMetrics;
+    
+    hr = textLayout->HitTestPoint(
+        x,
+        0.0f,
+        &isTrailingHit,
+        &isInside,
+        &hitMetrics
+    );
+    
+    size_t position = 0;
+    
+    if (SUCCEEDED(hr)) {
+        position = static_cast<size_t>(hitMetrics.textPosition);
+        
+        // If hit trailing edge of character, move to next position
+        if (isTrailingHit && position < text.length()) {
+            position++;
+        }
+    }
+    
+    textLayout->Release();
+    
+    return std::min(position, text.length());
+}
+
+// ============================================================================
 // RESOURCE MANAGEMENT
 // ============================================================================
 

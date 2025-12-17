@@ -99,6 +99,18 @@ public:
                      float dx, float dy) override;
 
     // ========================================================================
+    // TEXT MEASUREMENT (NEW!)
+    // ========================================================================
+    
+    // Measure text width up to a specific position
+    float measureTextWidth(const std::wstring& text, size_t length, 
+                          const FontStyle& font) const;
+    
+    // Get character position from X coordinate (hit testing)
+    size_t getCharPositionFromX(const std::wstring& text, float x,
+                                const FontStyle& font) const;
+
+    // ========================================================================
     // RESOURCE MANAGEMENT
     // ========================================================================
 

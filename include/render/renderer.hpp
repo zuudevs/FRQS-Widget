@@ -110,6 +110,18 @@ public:
     virtual void setOpacity(float opacity) = 0;
     virtual void setTransform(float m11, float m12, float m21, float m22,
                              float dx, float dy) = 0;
+    
+    // ========================================================================
+    // TEXT MEASUREMENT (NEW!)
+    // ========================================================================
+    
+    // Measure text width up to a specific character position
+    virtual float measureTextWidth(const std::wstring& text, size_t length,
+                                   const FontStyle& font) const = 0;
+    
+    // Get character position from X coordinate (hit testing)
+    virtual size_t getCharPositionFromX(const std::wstring& text, float x,
+                                       const FontStyle& font) const = 0;
 };
 
 // ============================================================================
@@ -122,8 +134,14 @@ inline widget::Size<uint32_t> measureText(
     const std::wstring& text,
     const FontStyle& font = FontStyle{}
 ) {
-    // Placeholder - actual implementation in renderer_d2d.cpp
-    (void)renderer;
+    // Try extended renderer first
+    if (auto* extRenderer = dynamic_cast<IExtendedRenderer*>(&renderer)) {
+        float width = extRenderer->measureTextWidth(text, text.length(), font);
+        return widget::Size(static_cast<uint32_t>(width), 
+                           static_cast<uint32_t>(font.size * 1.5f));
+    }
+    
+    // Fallback to rough estimation
     (void)text;
     (void)font;
     return widget::Size(100u, 20u);
