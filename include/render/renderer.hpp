@@ -111,10 +111,6 @@ public:
     virtual void setTransform(float m11, float m12, float m21, float m22,
                              float dx, float dy) = 0;
     
-    // ========================================================================
-    // TEXT MEASUREMENT (NEW!)
-    // ========================================================================
-    
     // Measure text width up to a specific character position
     virtual float measureTextWidth(const std::wstring& text, size_t length,
                                    const FontStyle& font) const = 0;
@@ -122,6 +118,18 @@ public:
     // Get character position from X coordinate (hit testing)
     virtual size_t getCharPositionFromX(const std::wstring& text, float x,
                                        const FontStyle& font) const = 0;
+
+	void translate(float dx, float dy) override {
+		if (!renderTarget_) return;
+		
+		D2D1_MATRIX_3X2_F current;
+		renderTarget_->GetTransform(&current);
+		
+		D2D1_MATRIX_3X2_F translation = D2D1::Matrix3x2F::Translation(dx, dy);
+		D2D1_MATRIX_3X2_F combined = current * translation;
+		
+		renderTarget_->SetTransform(combined);
+	}
 };
 
 // ============================================================================

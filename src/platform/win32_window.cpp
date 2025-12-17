@@ -301,8 +301,36 @@ private:
                 return 0;
             }
 
-            case WM_MOUSEWHEEL : 
-                return 0;
+            case WM_MOUSEWHEEL: {
+				if (!pImpl->rootWidget) return 0;
+				
+				// Extract wheel delta (in units of WHEEL_DELTA = 120)
+				int32_t delta = GET_WHEEL_DELTA_WPARAM(wp);
+				
+				// Get mouse position (in screen coordinates)
+				POINT pt;
+				pt.x = GET_X_LPARAM(lp);
+				pt.y = GET_Y_LPARAM(lp);
+				ScreenToClient(hwnd, &pt);
+				
+				// Get modifiers
+				uint32_t mods = 0;
+				if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
+				if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
+				if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
+				
+				event::MouseWheelEvent evt{
+					.delta = delta,
+					.position = widget::Point<int32_t>(pt.x, pt.y),
+					.modifiers = mods,
+					.timestamp = static_cast<uint64_t>(GetTickCount64())
+				};
+				
+				event::Event e = evt;
+				pImpl->rootWidget->onEvent(e);
+				
+				return 0;
+			}
 
             default:
                 return DefWindowProcW(hwnd, msg, wp, lp);

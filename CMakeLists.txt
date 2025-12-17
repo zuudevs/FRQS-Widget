@@ -324,6 +324,21 @@ if(BUILD_EXAMPLES)
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
+
+	# Scroll Demo
+	add_executable(scroll_demo
+		examples/scroll_demo.cpp
+	)
+
+	target_link_libraries(scroll_demo
+		PRIVATE
+			FRQS_WIDGET_LIB
+	)
+
+	target_include_directories(scroll_demo
+		PRIVATE
+			${CMAKE_SOURCE_DIR}/include
+	)
 endif()
 
 # ============================================================================
@@ -390,8 +405,12 @@ if(BUILD_TESTS)
 message(STATUS "  - unit_tests")
 message(STATUS "  - window_test")
 message(STATUS "  - event_test")
+message(STATUS "  - flex_layout_test")
 endif()
 if(BUILD_EXAMPLES)
 message(STATUS "  - hello_window")
+message(STATUS "  - widget_demo")
+message(STATUS "  - flex_layout")
+message(STATUS "  - scroll_demo")
 endif()
 message(STATUS "========================================")

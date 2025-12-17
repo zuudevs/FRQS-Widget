@@ -38,6 +38,13 @@ struct MouseButtonEvent {
     uint64_t timestamp;
 };
 
+struct MouseWheelEvent {
+    int32_t delta;              // Scroll delta (typically ±120 per notch)
+    widget::Point<int32_t> position;
+    uint32_t modifiers;
+    uint64_t timestamp;
+};
+
 struct KeyEvent {
     enum class Action : uint8_t { Press, Release, Repeat };
     
@@ -78,13 +85,14 @@ struct FileDropEvent {
 // ============================================================================
 
 using Event = std::variant<
-    std::monostate,        // Empty/null event
-    MouseMoveEvent,        // 32 bytes (hot)
-    MouseButtonEvent,      // 24 bytes (hot)
-    KeyEvent,              // 16 bytes (hot)
-    ResizeEvent,           // 16 bytes (hot)
-    PaintEvent,            // 16 bytes (hot)
-    FileDropEvent          // 8 bytes (ptr only, cold)
+    std::monostate,			// Empty/null event
+    MouseMoveEvent,			// 32 bytes (hot)
+    MouseButtonEvent,		// 24 bytes (hot)
+    KeyEvent,				// 16 bytes (hot)
+    ResizeEvent,			// 16 bytes (hot)
+    PaintEvent,				// 16 bytes (hot)
+    FileDropEvent,          // 8 bytes (ptr only, cold)
+	MouseWheelEvent			// 24 bytes (hot)
 >;
 
 // Size validation (should be ~32-40 bytes on x64)
