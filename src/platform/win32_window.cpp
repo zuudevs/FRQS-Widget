@@ -80,15 +80,11 @@ private:
         
         switch (msg) {
             case WM_GETMINMAXINFO: {
-                // ✅ CRITICAL FIX: Remove size constraints
                 auto* mmi = reinterpret_cast<MINMAXINFO*>(lp);
-                
-                // Allow any size from very small to very large
                 mmi->ptMinTrackSize.x = 1;
                 mmi->ptMinTrackSize.y = 1;
                 mmi->ptMaxTrackSize.x = 32000;
                 mmi->ptMaxTrackSize.y = 32000;
-                
                 return 0;
             }
             
@@ -108,11 +104,8 @@ private:
             }
 
             case WM_MOVE: {
-                // Get client area position (not window position)
-                // This accounts for invisible DWM borders
                 POINT clientTopLeft = {0, 0};
                 ClientToScreen(hwnd, &clientTopLeft);
-                
                 pImpl->position = widget::Point<int32_t>(clientTopLeft.x, clientTopLeft.y);
                 return 0;
             }
@@ -157,15 +150,45 @@ private:
                 pImpl->focused = false;
                 return 0;
 
+            case WM_CHAR: {
+                if (!pImpl->rootWidget) return 0;
+                
+                wchar_t character = static_cast<wchar_t>(wp);
+                
+                // Ignore control characters except tab, enter, backspace
+                if (character < 32 && character != L'\t' && character != L'\r' && character != L'\b') {
+                    return 0;
+                }
+                
+                // Get modifiers
+                uint32_t mods = 0;
+                if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
+                if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
+                if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
+                
+                // Set high bit to indicate WM_CHAR
+                mods |= 0x80000000;
+                
+                event::KeyEvent evt{
+                    .keyCode = static_cast<uint32_t>(character),
+                    .action = event::KeyEvent::Action::Press,
+                    .modifiers = mods,
+                    .timestamp = static_cast<uint64_t>(GetTickCount64())
+                };
+                
+                event::Event e = evt;
+                pImpl->rootWidget->onEvent(e);
+                return 0;
+            }
+
             case WM_KEYDOWN :
             case WM_KEYUP :
             case WM_SYSKEYDOWN :
             case WM_SYSKEYUP :{
-                if (!pImpl->rootWidget) return 0;
+                if (!pImpl->rootWidget) break;
                 
                 event::KeyEvent::Action action;
                 if (msg == WM_KEYDOWN || msg == WM_SYSKEYDOWN) {
-                    // Check if this is a repeat
                     bool isRepeat = (lp & (1 << 30)) != 0;
                     action = isRepeat ? event::KeyEvent::Action::Repeat : event::KeyEvent::Action::Press;
                 } else {
@@ -186,10 +209,9 @@ private:
                 };
                 
                 event::Event e = evt;
-                bool handled = pImpl->rootWidget->onEvent(e);
+                pImpl->rootWidget->onEvent(e);
                 
-                // If handled by widget, don't pass to DefWindowProc
-                if (handled) return 0;
+                // Always break to allow DefWindowProc to generate WM_CHAR
                 break;
             }
 
@@ -223,8 +245,8 @@ private:
                 return 0;
             }
 
-			case WM_LBUTTONUP : 
-			case WM_RBUTTONUP : 
+            case WM_LBUTTONUP : 
+            case WM_RBUTTONUP : 
             case WM_MBUTTONUP : {
                 if (!pImpl->rootWidget) return 0;
                 
@@ -280,42 +302,14 @@ private:
             }
 
             case WM_MOUSEWHEEL : 
-                // TODO: Dispatch mouse events
                 return 0;
-			
-			case WM_CHAR: {
-				if (!pImpl->rootWidget) return 0;
-				
-				wchar_t character = static_cast<wchar_t>(wp);
-				
-				// Ignore control characters except tab, enter, backspace
-				if (character < 32 && character != L'\t' && character != L'\r' && character != L'\b') {
-					return 0;
-				}
-				
-				// Create a text input event (we'll use KeyEvent with special flag)
-				// For now, create a synthetic KeyEvent that widgets can recognize as character input
-				uint32_t mods = 0;
-				if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
-				if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
-				if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
-				
-				// Store character in keyCode (this is a hack but works for our use case)
-				event::KeyEvent evt{
-					.keyCode = static_cast<uint32_t>(character),
-					.action = event::KeyEvent::Action::Press,
-					.modifiers = mods | 0x80000000, // Set high bit to indicate this is WM_CHAR
-					.timestamp = static_cast<uint64_t>(GetTickCount64())
-				};
-				
-				event::Event e = evt;
-				pImpl->rootWidget->onEvent(e);
-				return 0;
-			}
 
             default:
                 return DefWindowProcW(hwnd, msg, wp, lp);
         }
+        
+        // Default handling for messages that use 'break'
+        return DefWindowProcW(hwnd, msg, wp, lp);
     }
 
 public:
@@ -372,14 +366,12 @@ HWND createNativeWindow(
         style &= ~(WS_THICKFRAME | WS_MAXIMIZEBOX);
     }
 
-    // Calculate window size including borders
     RECT rect = {0, 0, static_cast<LONG>(params.size.w), static_cast<LONG>(params.size.h)};
     AdjustWindowRectEx(&rect, style, FALSE, exStyle);
 
     int width = rect.right - rect.left;
     int height = rect.bottom - rect.top;
 
-    // Create window
     HWND hwnd = Win32WindowClass::createWindow(
         params.title.c_str(),
         params.position.x,
@@ -395,7 +387,6 @@ HWND createNativeWindow(
         throw std::runtime_error("Failed to create native window");
     }
 
-    // Show window if requested
     if (params.visible) {
         ShowWindow(hwnd, SW_SHOW);
         UpdateWindow(hwnd);

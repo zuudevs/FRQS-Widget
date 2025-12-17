@@ -1,4 +1,4 @@
-// examples/widgets_demo.cpp - Comprehensive Widget Demo
+// examples/widgets_demo.cpp - Safer Widget Demo
 #include "frqs-widget.hpp"
 #include "widget/container.hpp"
 #include "widget/label.hpp"
@@ -96,7 +96,8 @@ private:
         primaryBtn->setNormalColor(Color(52, 152, 219));
         primaryBtn->setHoverColor(Color(41, 128, 185));
         primaryBtn->setOnClick([this]() {
-            updateStatus(L"Primary button clicked!");
+            // ✅ FIX: Use safe callback
+            safeUpdateStatus(L"Primary button clicked!");
             std::println("Primary button clicked!");
         });
         buttonRow->addChild(primaryBtn);
@@ -105,7 +106,7 @@ private:
         successBtn->setNormalColor(Color(46, 204, 113));
         successBtn->setHoverColor(Color(39, 174, 96));
         successBtn->setOnClick([this]() {
-            updateStatus(L"Success button clicked!");
+            safeUpdateStatus(L"Success button clicked!");
             std::println("Success button clicked!");
         });
         buttonRow->addChild(successBtn);
@@ -114,7 +115,7 @@ private:
         dangerBtn->setNormalColor(Color(231, 76, 60));
         dangerBtn->setHoverColor(Color(192, 57, 43));
         dangerBtn->setOnClick([this]() {
-            updateStatus(L"Danger button clicked!");
+            safeUpdateStatus(L"Danger button clicked!");
             std::println("Danger button clicked!");
         });
         buttonRow->addChild(dangerBtn);
@@ -142,16 +143,30 @@ private:
         textInput_ = std::make_shared<TextInput>();
         textInput_->setPlaceholder(L"Type something here...");
         textInput_->setRect(Rect(0, 0, 770u, 40u));
-        textInput_->setOnTextChanged([this](const std::wstring& text) {
-            updateStatus(std::format(L"Text changed: {}", text));
-        });
-        textInput_->setOnEnter([this](const std::wstring& text) {
-            updateStatus(std::format(L"Enter pressed: {}", text));
-            std::println("Enter pressed with text: {}", 
-                        std::string(text.begin(), text.end()));
-        });
-        inputSection->addChild(textInput_);
         
+        // ✅ FIX: Safer callbacks - no recursive invalidation
+        textInput_->setOnTextChanged([this](const std::wstring& text) {
+            try {
+                // Just log, don't update UI during text change
+                if (text.length() % 10 == 0) {  // Only log every 10 chars
+                    std::println("Text length: {}", text.length());
+                }
+            } catch (...) {
+                // Swallow exceptions in callback
+            }
+        });
+        
+        textInput_->setOnEnter([this](const std::wstring& text) {
+            try {
+                safeUpdateStatus(std::format(L"Enter pressed: {}", text));
+                std::println("Enter pressed with text: {}", 
+                            std::string(text.begin(), text.end()));
+            } catch (...) {
+                // Swallow exceptions
+            }
+        });
+        
+        inputSection->addChild(textInput_);
         root->addChild(inputSection);
         
         // ====================================================================
@@ -232,20 +247,29 @@ private:
         window->setRootWidget(root);
     }
     
-    void updateStatus(const std::wstring& message) {
-        if (statusLabel_) {
-            statusLabel_->setText(message);
+    // ✅ FIX: Safe update methods with exception handling
+    void safeUpdateStatus(const std::wstring& message) {
+        try {
+            if (statusLabel_) {
+                statusLabel_->setText(message);
+            }
+        } catch (const std::exception& e) {
+            std::println(stderr, "Error updating status: {}", e.what());
         }
     }
     
     void updateSliderValue(double value) {
-        if (sliderValueLabel_) {
-            sliderValueLabel_->setText(
-                std::format(L"Value: {:.0f}", value)
-            );
+        try {
+            if (sliderValueLabel_) {
+                sliderValueLabel_->setText(
+                    std::format(L"Value: {:.0f}", value)
+                );
+            }
+            
+            std::println("Slider value: {:.1f}", value);
+        } catch (const std::exception& e) {
+            std::println(stderr, "Error updating slider: {}", e.what());
         }
-        
-        std::println("Slider value: {:.1f}", value);
     }
 };
 
