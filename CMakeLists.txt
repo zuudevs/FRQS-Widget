@@ -328,16 +328,16 @@ if(BUILD_EXAMPLES)
     )
 
 	# Scroll Demo
-	add_executable(scroll_demo
-		examples/scroll_demo.cpp
+	add_executable(scroll_view_demo
+		examples/scroll_view_demo.cpp
 	)
 
-	target_link_libraries(scroll_demo
+	target_link_libraries(scroll_view_demo
 		PRIVATE
 			FRQS_WIDGET_LIB
 	)
 
-	target_include_directories(scroll_demo
+	target_include_directories(scroll_view_demo
 		PRIVATE
 			${CMAKE_SOURCE_DIR}/include
 	)

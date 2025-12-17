@@ -357,11 +357,19 @@ void RendererD2D::drawTextEx(
 }
 
 void RendererD2D::save() {
-    // TODO: Implement state stack
+    if (!renderTarget_) return;
+    
+    D2D1_MATRIX_3X2_F currentTransform;
+    renderTarget_->GetTransform(&currentTransform);
+    transformStack_.push(currentTransform);
 }
 
 void RendererD2D::restore() {
-    // TODO: Implement state stack
+    if (!renderTarget_ || transformStack_.empty()) return;
+    
+    D2D1_MATRIX_3X2_F savedTransform = transformStack_.top();
+    transformStack_.pop();
+    renderTarget_->SetTransform(savedTransform);
 }
 
 void RendererD2D::setOpacity(float opacity) {
@@ -590,6 +598,9 @@ D2D1_RECT_F RendererD2D::toD2DRect(
 
 void RendererD2D::cleanup() noexcept {
     cleanupDeviceResources();
+
+    while (!clipStack_.empty()) clipStack_.pop();
+    while (!transformStack_.empty()) transformStack_.pop();
 
     if (defaultTextFormat_) {
         defaultTextFormat_->Release();

@@ -21,6 +21,7 @@ private:
     // State
     platform::NativeHandle hwnd_;
     std::stack<widget::Rect<int32_t, uint32_t>> clipStack_;
+	std::stack<D2D1_MATRIX_3X2_F> transformStack_;
     bool inRender_ = false;
 
 public:
