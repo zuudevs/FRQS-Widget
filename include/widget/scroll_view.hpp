@@ -1,3 +1,4 @@
+// include/widget/scroll_view.hpp - FIXED VERSION
 #pragma once
 
 #include "iwidget.hpp"
@@ -101,9 +102,7 @@ private:
     bool handleMouseButton(const event::MouseButtonEvent& evt);
     bool handleMouseMove(const event::MouseMoveEvent& evt);
 
-    // Coordinate transformation
     Point<int32_t> translateToContentSpace(const Point<int32_t>& screenPoint) const;
-    std::optional<event::Event> translateEvent(const event::Event& event) const;
 
     // Hit testing
     bool isPointInVerticalScrollbar(const Point<int32_t>& point) const;

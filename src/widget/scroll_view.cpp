@@ -1,3 +1,4 @@
+// src/widget/scroll_view.cpp - FIXED VERSION
 #include "widget/scroll_view.hpp"
 #include "render/renderer.hpp"
 #include <algorithm>
@@ -70,30 +71,105 @@ void ScrollView::setRect(const Rect<int32_t, uint32_t>& rect) {
     clampScrollOffset();
 }
 
+// ============================================================================
+// ✅ FIXED: Event handling with proper coordinate transformation
+// ============================================================================
+
 bool ScrollView::onEvent(const event::Event& event) {
-    // Handle mouse wheel
+    // Handle mouse wheel - check if it's on scrollbar first
     if (auto* wheelEvt = std::get_if<event::MouseWheelEvent>(&event)) {
-        return handleMouseWheel(*wheelEvt);
+        // If mouse is on scrollbar, don't pass to content
+        auto vScrollbar = getVerticalScrollbarRect();
+        auto hScrollbar = getHorizontalScrollbarRect();
+        bool onScrollbar = 
+            (wheelEvt->position.x >= vScrollbar.x && wheelEvt->position.x < vScrollbar.getRight() &&
+             wheelEvt->position.y >= vScrollbar.y && wheelEvt->position.y < vScrollbar.getBottom()) ||
+            (wheelEvt->position.x >= hScrollbar.x && wheelEvt->position.x < hScrollbar.getRight() &&
+             wheelEvt->position.y >= hScrollbar.y && wheelEvt->position.y < hScrollbar.getBottom());
+        
+        if (handleMouseWheel(*wheelEvt)) {
+            return true;
+        }
+        
+        // If not handled by scrollbar, pass to content with transformed coordinates
+        if (!onScrollbar && content_) {
+            event::MouseWheelEvent transformed = *wheelEvt;
+            transformed.position = translateToContentSpace(wheelEvt->position);
+            event::Event contentEvent = transformed;
+            if (content_->onEvent(contentEvent)) {
+                return true;
+            }
+        }
     }
 
     // Handle mouse button (for scrollbar dragging)
     if (auto* btnEvt = std::get_if<event::MouseButtonEvent>(&event)) {
+        // Check if clicking on scrollbar first
         if (handleMouseButton(*btnEvt)) {
             return true;
+        }
+        
+        // ✅ FIX: Transform coordinates before passing to content
+        if (content_) {
+            auto viewport = getViewportRect();
+            
+            // Check if click is inside viewport
+            bool insideViewport = 
+                btnEvt->position.x >= viewport.x && 
+                btnEvt->position.x < viewport.getRight() &&
+                btnEvt->position.y >= viewport.y && 
+                btnEvt->position.y < viewport.getBottom();
+            
+            if (insideViewport) {
+                event::MouseButtonEvent transformed = *btnEvt;
+                transformed.position = translateToContentSpace(btnEvt->position);
+                event::Event contentEvent = transformed;
+                
+                if (content_->onEvent(contentEvent)) {
+                    return true;
+                }
+            }
         }
     }
 
     // Handle mouse move (for scrollbar hover and dragging)
     if (auto* moveEvt = std::get_if<event::MouseMoveEvent>(&event)) {
+        // Handle scrollbar interaction first
         if (handleMouseMove(*moveEvt)) {
             return true;
         }
+        
+        // ✅ FIX: Transform coordinates before passing to content
+        if (content_) {
+            auto viewport = getViewportRect();
+            
+            // Check if mouse is inside viewport
+            bool insideViewport = 
+                moveEvt->position.x >= viewport.x && 
+                moveEvt->position.x < viewport.getRight() &&
+                moveEvt->position.y >= viewport.y && 
+                moveEvt->position.y < viewport.getBottom();
+            
+            if (insideViewport) {
+                event::MouseMoveEvent transformed = *moveEvt;
+                transformed.position = translateToContentSpace(moveEvt->position);
+                // Also transform delta (important for drag operations)
+                transformed.delta = Point<int32_t>(
+                    moveEvt->delta.x,
+                    moveEvt->delta.y
+                );
+                event::Event contentEvent = transformed;
+                
+                if (content_->onEvent(contentEvent)) {
+                    return true;
+                }
+            }
+        }
     }
 
-    // Transform event and pass to content
+    // For other events (keyboard, etc.), pass directly to content
     if (content_) {
-        auto transformedEvent = translateEvent(event);
-        if (content_->onEvent(*transformedEvent)) {
+        if (content_->onEvent(event)) {
             return true;
         }
     }
@@ -437,7 +513,7 @@ bool ScrollView::handleMouseMove(const event::MouseMoveEvent& evt) {
 }
 
 // ============================================================================
-// COORDINATE TRANSFORMATION
+// ✅ FIXED: Coordinate transformation
 // ============================================================================
 
 Point<int32_t> ScrollView::translateToContentSpace(const Point<int32_t>& screenPoint) const {
@@ -447,29 +523,6 @@ Point<int32_t> ScrollView::translateToContentSpace(const Point<int32_t>& screenP
         screenPoint.x - viewport.x + static_cast<int32_t>(scrollOffset_.x),
         screenPoint.y - viewport.y + static_cast<int32_t>(scrollOffset_.y)
     );
-}
-
-std::optional<event::Event> ScrollView::translateEvent(const event::Event& event) const {
-    // Transform mouse events to content space
-    if (auto* mouseMove = std::get_if<event::MouseMoveEvent>(&event)) {
-        event::MouseMoveEvent transformed = *mouseMove;
-        transformed.position = translateToContentSpace(mouseMove->position);
-        return transformed;
-    }
-
-    if (auto* mouseBtn = std::get_if<event::MouseButtonEvent>(&event)) {
-        event::MouseButtonEvent transformed = *mouseBtn;
-        transformed.position = translateToContentSpace(mouseBtn->position);
-        return transformed;
-    }
-
-    if (auto* mouseWheel = std::get_if<event::MouseWheelEvent>(&event)) {
-        event::MouseWheelEvent transformed = *mouseWheel;
-        transformed.position = translateToContentSpace(mouseWheel->position);
-        return transformed;
-    }
-
-    return std::nullopt;
 }
 
 // ============================================================================
