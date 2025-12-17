@@ -15,8 +15,32 @@ class Widget;
 class Renderer;
 
 namespace internal {
-	void setWidgetWindowHandle(Widget*, void*) ;
+    void setWidgetWindowHandle(Widget*, void*);
 }
+
+// ============================================================================
+// LAYOUT PROPERTIES (POD struct - zero overhead)
+// ============================================================================
+
+struct LayoutProps {
+    // Flex weight (0 = fixed size, > 0 = share remaining space proportionally)
+    float weight = 0.0f;
+    
+    // Size constraints
+    int32_t minWidth = 0;
+    int32_t maxWidth = 99999;
+    int32_t minHeight = 0;
+    int32_t maxHeight = 99999;
+    
+    // Self-alignment within allocated space
+    enum class Align : uint8_t {
+        Start,      // Left (horizontal) or Top (vertical)
+        Center,     // Center
+        End,        // Right (horizontal) or Bottom (vertical)
+        Stretch     // Fill available space (default)
+    };
+    Align alignSelf = Align::Stretch;
+};
 
 // ============================================================================
 // WIDGET INTERFACE (Virtual for polymorphism at high level ONLY)
@@ -93,7 +117,31 @@ public:
     void invalidate() noexcept;
     void invalidateRect(const Rect<int32_t, uint32_t>& rect) noexcept;
 
-	friend void internal::setWidgetWindowHandle(Widget* widget, void* hwnd) ;
+    // ========================================================================
+    // LAYOUT PROPERTIES (NEW!)
+    // ========================================================================
+
+    // Flex weight (0 = fixed, > 0 = proportional share of remaining space)
+    void setLayoutWeight(float weight) noexcept;
+    float getLayoutWeight() const noexcept;
+
+    // Size constraints
+    void setMinSize(int32_t width, int32_t height) noexcept;
+    void setMaxSize(int32_t width, int32_t height) noexcept;
+    void setMinWidth(int32_t width) noexcept;
+    void setMaxWidth(int32_t width) noexcept;
+    void setMinHeight(int32_t height) noexcept;
+    void setMaxHeight(int32_t height) noexcept;
+
+    // Self-alignment
+    void setAlignSelf(LayoutProps::Align align) noexcept;
+    LayoutProps::Align getAlignSelf() const noexcept;
+
+    // Get full layout properties (for layout engines)
+    const LayoutProps& getLayoutProps() const noexcept;
+    LayoutProps& getLayoutPropsMut() noexcept;
+
+    friend void internal::setWidgetWindowHandle(Widget* widget, void* hwnd);
 };
 
 // ============================================================================

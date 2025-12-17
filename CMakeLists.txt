@@ -258,6 +258,21 @@ if(BUILD_TESTS)
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
+
+	# Event system test
+    add_executable(flex_layout_test
+        tests/flex_layout_test.cpp
+    )
+    
+    target_link_libraries(flex_layout_test
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+    
+    target_include_directories(flex_layout_test
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
 endif()
 
 # ============================================================================
@@ -292,6 +307,20 @@ if(BUILD_EXAMPLES)
     )
     
     target_include_directories(widget_demo
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+
+	add_executable(flex_layout
+        examples/flex_layout_demo.cpp
+    )
+    
+    target_link_libraries(flex_layout
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+    
+    target_include_directories(flex_layout
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )

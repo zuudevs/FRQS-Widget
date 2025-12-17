@@ -16,6 +16,10 @@ struct Widget::Impl {
     IWidget* parent = nullptr;
     std::vector<std::shared_ptr<IWidget>> children;
     HWND windowHandle = nullptr;
+    
+    // Layout properties (NEW!)
+    LayoutProps layoutProps;
+    
     Impl() = default;
     
     HWND getWindowHandle() {
@@ -25,7 +29,6 @@ struct Widget::Impl {
                 return parentWidget->pImpl_->getWindowHandle();
             }
         }
-        
         return nullptr;
     }
 };
@@ -66,6 +69,104 @@ void Widget::setVisible(bool visible) noexcept {
 
 bool Widget::isVisible() const noexcept {
     return pImpl_->visible;
+}
+
+// ============================================================================
+// LAYOUT PROPERTIES (NEW!)
+// ============================================================================
+
+void Widget::setLayoutWeight(float weight) noexcept {
+    if (pImpl_->layoutProps.weight == weight) return;
+    pImpl_->layoutProps.weight = weight;
+    
+    // Notify parent to re-layout (cast to Widget* to access invalidate)
+    if (pImpl_->parent) {
+        if (auto* parentWidget = dynamic_cast<Widget*>(pImpl_->parent)) {
+            parentWidget->invalidate();
+        }
+    }
+}
+
+float Widget::getLayoutWeight() const noexcept {
+    return pImpl_->layoutProps.weight;
+}
+
+void Widget::setMinSize(int32_t width, int32_t height) noexcept {
+    pImpl_->layoutProps.minWidth = width;
+    pImpl_->layoutProps.minHeight = height;
+    if (pImpl_->parent) {
+        if (auto* parentWidget = dynamic_cast<Widget*>(pImpl_->parent)) {
+            parentWidget->invalidate();
+        }
+    }
+}
+
+void Widget::setMaxSize(int32_t width, int32_t height) noexcept {
+    pImpl_->layoutProps.maxWidth = width;
+    pImpl_->layoutProps.maxHeight = height;
+    if (pImpl_->parent) {
+        if (auto* parentWidget = dynamic_cast<Widget*>(pImpl_->parent)) {
+            parentWidget->invalidate();
+        }
+    }
+}
+
+void Widget::setMinWidth(int32_t width) noexcept {
+    pImpl_->layoutProps.minWidth = width;
+    if (pImpl_->parent) {
+        if (auto* parentWidget = dynamic_cast<Widget*>(pImpl_->parent)) {
+            parentWidget->invalidate();
+        }
+    }
+}
+
+void Widget::setMaxWidth(int32_t width) noexcept {
+    pImpl_->layoutProps.maxWidth = width;
+    if (pImpl_->parent) {
+        if (auto* parentWidget = dynamic_cast<Widget*>(pImpl_->parent)) {
+            parentWidget->invalidate();
+        }
+    }
+}
+
+void Widget::setMinHeight(int32_t height) noexcept {
+    pImpl_->layoutProps.minHeight = height;
+    if (pImpl_->parent) {
+        if (auto* parentWidget = dynamic_cast<Widget*>(pImpl_->parent)) {
+            parentWidget->invalidate();
+        }
+    }
+}
+
+void Widget::setMaxHeight(int32_t height) noexcept {
+    pImpl_->layoutProps.maxHeight = height;
+    if (pImpl_->parent) {
+        if (auto* parentWidget = dynamic_cast<Widget*>(pImpl_->parent)) {
+            parentWidget->invalidate();
+        }
+    }
+}
+
+void Widget::setAlignSelf(LayoutProps::Align align) noexcept {
+    if (pImpl_->layoutProps.alignSelf == align) return;
+    pImpl_->layoutProps.alignSelf = align;
+    if (pImpl_->parent) {
+        if (auto* parentWidget = dynamic_cast<Widget*>(pImpl_->parent)) {
+            parentWidget->invalidate();
+        }
+    }
+}
+
+LayoutProps::Align Widget::getAlignSelf() const noexcept {
+    return pImpl_->layoutProps.alignSelf;
+}
+
+const LayoutProps& Widget::getLayoutProps() const noexcept {
+    return pImpl_->layoutProps;
+}
+
+LayoutProps& Widget::getLayoutPropsMut() noexcept {
+    return pImpl_->layoutProps;
 }
 
 // ============================================================================
@@ -113,7 +214,7 @@ void Widget::addChild(std::shared_ptr<IWidget> child) {
             childWidget->pImpl_->parent->removeChild(child.get());
         }
         childWidget->pImpl_->parent = this;
-        childWidget->pImpl_->windowHandle = pImpl_->getWindowHandle();  // NEW!
+        childWidget->pImpl_->windowHandle = pImpl_->getWindowHandle();
     }
 
     pImpl_->children.push_back(std::move(child));
@@ -129,7 +230,7 @@ void Widget::removeChild(IWidget* child) {
     if (it != pImpl_->children.end()) {
         if (auto* childWidget = dynamic_cast<Widget*>(child)) {
             childWidget->pImpl_->parent = nullptr;
-            childWidget->pImpl_->windowHandle = nullptr;  // NEW!
+            childWidget->pImpl_->windowHandle = nullptr;
         }
         pImpl_->children.erase(it);
         invalidate();
@@ -160,7 +261,7 @@ Color Widget::getBackgroundColor() const noexcept {
 }
 
 // ============================================================================
-// INVALIDATION - ✅ FIXED: Actually trigger window redraw
+// INVALIDATION
 // ============================================================================
 
 void Widget::invalidate() noexcept {

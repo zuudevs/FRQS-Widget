@@ -90,4 +90,32 @@ inline std::shared_ptr<Container> createGrid(
     return container;
 }
 
+// ============================================================================
+// FLEX LAYOUT CONVENIENCE FUNCTIONS (NEW!)
+// ============================================================================
+
+// Create container with flex layout (ROW)
+inline std::shared_ptr<Container> createFlexRow(
+    uint32_t gap = 0,
+    uint32_t padding = 0
+) {
+    auto container = std::make_shared<Container>();
+    container->setLayout(std::make_unique<FlexLayout>(
+        FlexLayout::Direction::Row, gap, padding
+    ));
+    return container;
+}
+
+// Create container with flex layout (COLUMN)
+inline std::shared_ptr<Container> createFlexColumn(
+    uint32_t gap = 0,
+    uint32_t padding = 0
+) {
+    auto container = std::make_shared<Container>();
+    container->setLayout(std::make_unique<FlexLayout>(
+        FlexLayout::Direction::Column, gap, padding
+    ));
+    return container;
+}
+
 } // namespace frqs::widget

@@ -2,10 +2,9 @@
 
 #include "iwidget.hpp"
 
-// Note: The Widget class is already declared in iwidget.hpp
-// This header exists for future extensions and consistency
-
 namespace frqs::widget {
+
+// Note: LayoutProps is defined in iwidget.hpp
 
 // ============================================================================
 // WIDGET HELPER FUNCTIONS
@@ -72,5 +71,12 @@ void visitVisibleWidgets(IWidget* root, Visitor&& visitor) {
         }
     }
 }
+
+// ============================================================================
+// LAYOUT PROPERTY ACCESSORS (for Widget class)
+// ============================================================================
+
+// These are implemented in widget.cpp
+// Usage: Cast IWidget* to Widget* to access layout properties
 
 } // namespace frqs::widget
