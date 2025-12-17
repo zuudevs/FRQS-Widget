@@ -373,3 +373,35 @@ Slider value: 48.0
 
 Demo ended successfully.
 
+description :
+# [Bug] Posisi Kursor (Caret) Offset Terlalu Jauh dari Karakter Terakhir pada TextInput
+
+**Tanggal:** 17 Desember 2025
+**Komponen:** UI Widget / TextInput
+**Prioritas:** Medium/High (Visual/UX)
+
+## Deskripsi Masalah
+Terdapat kesalahan perhitungan posisi render kursor (*caret*) pada widget input teks. Kursor tidak berada tepat di sebelah karakter terakhir yang diketik, melainkan memiliki jarak (gap) yang signifikan di sebelah kanan, seolah-olah ada karakter spasi tak terlihat (phantom whitespaces) atau kesalahan dalam perhitungan lebar string.
+
+## Bukti Visual (Screenshot)
+![Bug Cursor Offset]
+
+## Observasi Perilaku
+1. **Input:** User mengetik string "haii aku zuu".
+2. **Visual:** Teks terender dengan benar, namun kursor berada jauh di sebelah kanan.
+3. **Dugaan:** Semakin panjang teks yang diketik, jarak (*offset*) kursor kemungkinan semakin melebar (akumulatif).
+
+## Perilaku yang Diharapkan (Expected Behavior)
+Kursor seharusnya di-render tepat setelah *bounding box* atau *advance width* dari *glyph* terakhir, dengan margin standar (misalnya 1-2px), tanpa gap yang besar.
+
+## Kemungkinan Penyebab Teknis (Technical Hypothesis)
+Masalah ini kemungkinan besar disebabkan oleh salah satu dari hal berikut pada level rendering engine:
+
+1. **Kesalahan Perhitungan Text Width:**
+   Fungsi yang menghitung lebar teks (misalnya `GetTextSize` atau `MeasureString`) mungkin mengembalikan nilai yang mencakup *padding* internal yang tidak perlu, atau menggunakan *metrics* font yang salah.
+
+2. **Glyph Advance vs Bounding Box:**
+   Logika penempatan kursor mungkin menggunakan akumulasi *max character width* alih-alih *glyph advance* (lebar aktual per huruf). Jika menggunakan font *variable-width* (seperti Sans Serif pada gambar) namun dihitung seolah-olah *monospaced*, offset akan meleset.
+
+3. **Trailing Whitespace Handling:**
+   Ada kemungkinan sistem mendeteksi spasi di akhir string yang sebenarnya tidak ada, atau gagal mengabaikan *padding* kanan pada kontainer teks saat menghitung posisi X kursor.
