@@ -1,4 +1,4 @@
-// src/widget/scroll_view.cpp - FIXED VERSION
+// src/widget/scroll_view.cpp - FINAL FIXED VERSION
 #include "widget/scroll_view.hpp"
 #include "render/renderer.hpp"
 #include <algorithm>
@@ -21,7 +21,6 @@ ScrollView::ScrollView()
 // ============================================================================
 
 void ScrollView::setContent(std::shared_ptr<IWidget> content) {
-    // Remove old content
     if (content_) {
         removeChild(content_.get());
     }
@@ -72,15 +71,19 @@ void ScrollView::setRect(const Rect<int32_t, uint32_t>& rect) {
 }
 
 // ============================================================================
-// ✅ FIXED: Event handling with proper coordinate transformation
+// ✅ FINAL FIX: Complete Event Coordinate Translation
 // ============================================================================
 
 bool ScrollView::onEvent(const event::Event& event) {
-    // Handle mouse wheel - check if it's on scrollbar first
+    // ========================================================================
+    // STEP 1: Handle scrollbar interactions (NO coordinate transformation)
+    // ========================================================================
+    
+    // Mouse wheel - prioritize scrollbar if cursor is on it
     if (auto* wheelEvt = std::get_if<event::MouseWheelEvent>(&event)) {
-        // If mouse is on scrollbar, don't pass to content
         auto vScrollbar = getVerticalScrollbarRect();
         auto hScrollbar = getHorizontalScrollbarRect();
+        
         bool onScrollbar = 
             (wheelEvt->position.x >= vScrollbar.x && wheelEvt->position.x < vScrollbar.getRight() &&
              wheelEvt->position.y >= vScrollbar.y && wheelEvt->position.y < vScrollbar.getBottom()) ||
@@ -91,7 +94,7 @@ bool ScrollView::onEvent(const event::Event& event) {
             return true;
         }
         
-        // If not handled by scrollbar, pass to content with transformed coordinates
+        // Pass to content with transformed coordinates
         if (!onScrollbar && content_) {
             event::MouseWheelEvent transformed = *wheelEvt;
             transformed.position = translateToContentSpace(wheelEvt->position);
@@ -102,18 +105,18 @@ bool ScrollView::onEvent(const event::Event& event) {
         }
     }
 
-    // Handle mouse button (for scrollbar dragging)
+    // Mouse button (for scrollbar dragging)
     if (auto* btnEvt = std::get_if<event::MouseButtonEvent>(&event)) {
-        // Check if clicking on scrollbar first
+        // Check scrollbar interaction first
         if (handleMouseButton(*btnEvt)) {
             return true;
         }
         
-        // ✅ FIX: Transform coordinates before passing to content
+        // ✅ CRITICAL FIX: Transform coordinates before passing to content
         if (content_) {
             auto viewport = getViewportRect();
             
-            // Check if click is inside viewport
+            // Check if click is inside viewport bounds
             bool insideViewport = 
                 btnEvt->position.x >= viewport.x && 
                 btnEvt->position.x < viewport.getRight() &&
@@ -121,6 +124,7 @@ bool ScrollView::onEvent(const event::Event& event) {
                 btnEvt->position.y < viewport.getBottom();
             
             if (insideViewport) {
+                // Transform to content space
                 event::MouseButtonEvent transformed = *btnEvt;
                 transformed.position = translateToContentSpace(btnEvt->position);
                 event::Event contentEvent = transformed;
@@ -132,14 +136,14 @@ bool ScrollView::onEvent(const event::Event& event) {
         }
     }
 
-    // Handle mouse move (for scrollbar hover and dragging)
+    // Mouse move (for scrollbar hover and content interaction)
     if (auto* moveEvt = std::get_if<event::MouseMoveEvent>(&event)) {
         // Handle scrollbar interaction first
         if (handleMouseMove(*moveEvt)) {
             return true;
         }
         
-        // ✅ FIX: Transform coordinates before passing to content
+        // ✅ CRITICAL FIX: Transform coordinates before passing to content
         if (content_) {
             auto viewport = getViewportRect();
             
@@ -151,13 +155,11 @@ bool ScrollView::onEvent(const event::Event& event) {
                 moveEvt->position.y < viewport.getBottom();
             
             if (insideViewport) {
+                // Transform to content space
                 event::MouseMoveEvent transformed = *moveEvt;
                 transformed.position = translateToContentSpace(moveEvt->position);
-                // Also transform delta (important for drag operations)
-                transformed.delta = Point<int32_t>(
-                    moveEvt->delta.x,
-                    moveEvt->delta.y
-                );
+                // Delta remains unchanged (relative movement)
+                transformed.delta = moveEvt->delta;
                 event::Event contentEvent = transformed;
                 
                 if (content_->onEvent(contentEvent)) {
@@ -191,45 +193,34 @@ void ScrollView::render(Renderer& renderer) {
         return;
     }
 
-    // Try to use extended renderer for transform support
     auto* extRenderer = dynamic_cast<render::IExtendedRenderer*>(&renderer);
     if (!extRenderer) {
-        // Fallback: render without scrolling
         content_->render(renderer);
         return;
     }
 
     // ========================================================================
-    // RENDER CONTENT WITH CLIPPING AND TRANSLATION
+    // RENDER CONTENT WITH TRANSFORM
     // ========================================================================
 
-    // 1. Push clip rect (viewport)
     renderer.pushClip(viewport);
-
-    // 2. Save transform state
     extRenderer->save();
-
-    // 3. Apply translation (scroll offset)
     extRenderer->translate(-scrollOffset_.x, -scrollOffset_.y);
-
-    // 4. Render content (clipped and translated)
+    
     content_->render(renderer);
-
-    // 5. Restore transform
+    
     extRenderer->restore();
-
-    // 6. Pop clip
     renderer.popClip();
 
     // ========================================================================
-    // RENDER SCROLLBARS ON TOP (NO CLIPPING)
+    // RENDER SCROLLBARS (NO TRANSFORM)
     // ========================================================================
 
     renderScrollbars(renderer);
 }
 
 // ============================================================================
-// INTERNAL HELPERS - GEOMETRY
+// INTERNAL HELPERS
 // ============================================================================
 
 void ScrollView::updateContentSize() {
@@ -254,8 +245,6 @@ void ScrollView::clampScrollOffset() {
 
 Rect<int32_t, uint32_t> ScrollView::getViewportRect() const {
     auto rect = getRect();
-
-    // Reserve space for scrollbars if visible
     uint32_t w = rect.w;
     uint32_t h = rect.h;
 
@@ -311,24 +300,16 @@ Rect<int32_t, uint32_t> ScrollView::getVerticalThumbRect() const {
     if (scrollbarRect.w == 0) return scrollbarRect;
 
     auto viewport = getViewportRect();
-
-    // Calculate thumb size (proportional to viewport/content ratio)
     float ratio = static_cast<float>(viewport.h) / contentSize_.h;
     uint32_t thumbHeight = static_cast<uint32_t>(scrollbarRect.h * ratio);
-    thumbHeight = std::max(thumbHeight, 20u); // Minimum thumb size
+    thumbHeight = std::max(thumbHeight, 20u);
 
-    // Calculate thumb position
     float maxScroll = std::max(0.0f, static_cast<float>(contentSize_.h - viewport.h));
     float scrollRatio = maxScroll > 0.0f ? (scrollOffset_.y / maxScroll) : 0.0f;
     uint32_t maxThumbOffset = scrollbarRect.h - thumbHeight;
     int32_t thumbY = scrollbarRect.y + static_cast<int32_t>(maxThumbOffset * scrollRatio);
 
-    return Rect<int32_t, uint32_t>(
-        scrollbarRect.x,
-        thumbY,
-        scrollbarRect.w,
-        thumbHeight
-    );
+    return Rect<int32_t, uint32_t>(scrollbarRect.x, thumbY, scrollbarRect.w, thumbHeight);
 }
 
 Rect<int32_t, uint32_t> ScrollView::getHorizontalThumbRect() const {
@@ -336,28 +317,20 @@ Rect<int32_t, uint32_t> ScrollView::getHorizontalThumbRect() const {
     if (scrollbarRect.h == 0) return scrollbarRect;
 
     auto viewport = getViewportRect();
-
-    // Calculate thumb size
     float ratio = static_cast<float>(viewport.w) / contentSize_.w;
     uint32_t thumbWidth = static_cast<uint32_t>(scrollbarRect.w * ratio);
     thumbWidth = std::max(thumbWidth, 20u);
 
-    // Calculate thumb position
     float maxScroll = std::max(0.0f, static_cast<float>(contentSize_.w - viewport.w));
     float scrollRatio = maxScroll > 0.0f ? (scrollOffset_.x / maxScroll) : 0.0f;
     uint32_t maxThumbOffset = scrollbarRect.w - thumbWidth;
     int32_t thumbX = scrollbarRect.x + static_cast<int32_t>(maxThumbOffset * scrollRatio);
 
-    return Rect<int32_t, uint32_t>(
-        thumbX,
-        scrollbarRect.y,
-        thumbWidth,
-        scrollbarRect.h
-    );
+    return Rect<int32_t, uint32_t>(thumbX, scrollbarRect.y, thumbWidth, scrollbarRect.h);
 }
 
 // ============================================================================
-// RENDERING - SCROLLBARS
+// RENDERING
 // ============================================================================
 
 void ScrollView::renderScrollbars(Renderer& renderer) {
@@ -370,10 +343,7 @@ void ScrollView::renderScrollbars(Renderer& renderer) {
         auto scrollbarRect = getVerticalScrollbarRect();
         auto thumbRect = getVerticalThumbRect();
 
-        // Track background
         renderer.fillRect(scrollbarRect, Color(240, 240, 240, 200));
-
-        // Thumb
         Color thumbColor = hoveringVScroll_ ? scrollbarHoverColor_ : scrollbarColor_;
         renderer.fillRect(thumbRect, thumbColor);
     }
@@ -383,10 +353,7 @@ void ScrollView::renderScrollbars(Renderer& renderer) {
         auto scrollbarRect = getHorizontalScrollbarRect();
         auto thumbRect = getHorizontalThumbRect();
 
-        // Track background
         renderer.fillRect(scrollbarRect, Color(240, 240, 240, 200));
-
-        // Thumb
         Color thumbColor = hoveringHScroll_ ? scrollbarHoverColor_ : scrollbarColor_;
         renderer.fillRect(thumbRect, thumbColor);
     }
@@ -399,7 +366,6 @@ void ScrollView::renderScrollbars(Renderer& renderer) {
 bool ScrollView::handleMouseWheel(const event::MouseWheelEvent& evt) {
     auto viewport = getViewportRect();
 
-    // Check if mouse is inside viewport
     bool inside = evt.position.x >= viewport.x && 
                   evt.position.x < static_cast<int32_t>(viewport.getRight()) &&
                   evt.position.y >= viewport.y && 
@@ -407,11 +373,9 @@ bool ScrollView::handleMouseWheel(const event::MouseWheelEvent& evt) {
 
     if (!inside) return false;
 
-    // Scroll by wheel delta (negative = scroll down)
     float delta = static_cast<float>(evt.delta);
-    float scrollAmount = -delta / 4.0f; // Adjust sensitivity
+    float scrollAmount = -delta / 4.0f;
 
-    // Vertical scrolling by default
     scrollBy(0.0f, scrollAmount);
 
     return true;
@@ -423,7 +387,6 @@ bool ScrollView::handleMouseButton(const event::MouseButtonEvent& evt) {
     }
 
     if (evt.action == event::MouseButtonEvent::Action::Press) {
-        // Check if clicking on scrollbar thumbs
         auto vThumb = getVerticalThumbRect();
         auto hThumb = getHorizontalThumbRect();
 
@@ -463,7 +426,6 @@ bool ScrollView::handleMouseButton(const event::MouseButtonEvent& evt) {
 }
 
 bool ScrollView::handleMouseMove(const event::MouseMoveEvent& evt) {
-    // Handle scrollbar dragging
     if (draggingVScroll_) {
         auto viewport = getViewportRect();
         auto scrollbarRect = getVerticalScrollbarRect();
@@ -498,7 +460,6 @@ bool ScrollView::handleMouseMove(const event::MouseMoveEvent& evt) {
         return true;
     }
 
-    // Update hover state
     bool wasHoveringV = hoveringVScroll_;
     bool wasHoveringH = hoveringHScroll_;
 
@@ -513,12 +474,13 @@ bool ScrollView::handleMouseMove(const event::MouseMoveEvent& evt) {
 }
 
 // ============================================================================
-// ✅ FIXED: Coordinate transformation
+// ✅ COORDINATE TRANSFORMATION (The Core Fix)
 // ============================================================================
 
 Point<int32_t> ScrollView::translateToContentSpace(const Point<int32_t>& screenPoint) const {
     auto viewport = getViewportRect();
 
+    // Formula: ContentSpace = ScreenSpace - ViewportOrigin + ScrollOffset
     return Point<int32_t>(
         screenPoint.x - viewport.x + static_cast<int32_t>(scrollOffset_.x),
         screenPoint.y - viewport.y + static_cast<int32_t>(scrollOffset_.y)
