@@ -84,6 +84,7 @@ set(HEADERS_PUBLIC
     include/widget/slider.hpp
     include/widget/text_input.hpp
 	include/widget/internal.hpp
+	include/widget/scroll_view.hpp
     
     # Render
     include/render/dirty_rect.hpp
@@ -116,11 +117,12 @@ set(SOURCES_IMPL
     
     # Widget
     src/widget/widget.cpp
-    src/widget/button.cpp             # <-- New Widget Source
-    src/widget/container.cpp          # <-- New Widget Source
-    src/widget/label.cpp              # <-- New Widget Source
-    src/widget/slider.cpp             # <-- New Widget Source
-    src/widget/text_input.cpp         # <-- New Widget Source
+    src/widget/button.cpp
+    src/widget/container.cpp
+    src/widget/label.cpp
+    src/widget/slider.cpp
+    src/widget/text_input.cpp
+	src/widget/scroll_view.cpp
     
     # Render
     src/render/renderer_d2d.cpp

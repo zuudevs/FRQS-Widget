@@ -384,6 +384,18 @@ void RendererD2D::setTransform(float m11, float m12, float m21, float m22,
     renderTarget_->SetTransform(matrix);
 }
 
+void RendererD2D::translate(float dx, float dy) {
+    if (!renderTarget_) return;
+    
+    D2D1_MATRIX_3X2_F current;
+    renderTarget_->GetTransform(&current);
+    
+    D2D1_MATRIX_3X2_F translation = D2D1::Matrix3x2F::Translation(dx, dy);
+    D2D1_MATRIX_3X2_F combined = current * translation;
+    
+    renderTarget_->SetTransform(combined);
+}
+
 // ============================================================================
 // TEXT MEASUREMENT IMPLEMENTATION (NEW!)
 // ============================================================================

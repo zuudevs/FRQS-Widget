@@ -119,17 +119,7 @@ public:
     virtual size_t getCharPositionFromX(const std::wstring& text, float x,
                                        const FontStyle& font) const = 0;
 
-	void translate(float dx, float dy) override {
-		if (!renderTarget_) return;
-		
-		D2D1_MATRIX_3X2_F current;
-		renderTarget_->GetTransform(&current);
-		
-		D2D1_MATRIX_3X2_F translation = D2D1::Matrix3x2F::Translation(dx, dy);
-		D2D1_MATRIX_3X2_F combined = current * translation;
-		
-		renderTarget_->SetTransform(combined);
-	}
+	virtual void translate(float dx, float dy) = 0;
 };
 
 // ============================================================================

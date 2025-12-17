@@ -93,7 +93,7 @@ bool ScrollView::onEvent(const event::Event& event) {
     // Transform event and pass to content
     if (content_) {
         auto transformedEvent = translateEvent(event);
-        if (content_->onEvent(transformedEvent)) {
+        if (content_->onEvent(*transformedEvent)) {
             return true;
         }
     }
@@ -325,9 +325,9 @@ bool ScrollView::handleMouseWheel(const event::MouseWheelEvent& evt) {
 
     // Check if mouse is inside viewport
     bool inside = evt.position.x >= viewport.x && 
-                  evt.position.x < viewport.getRight() &&
+                  evt.position.x < static_cast<int32_t>(viewport.getRight()) &&
                   evt.position.y >= viewport.y && 
-                  evt.position.y < viewport.getBottom();
+                  evt.position.y < static_cast<int32_t>(viewport.getBottom());
 
     if (!inside) return false;
 
@@ -352,14 +352,14 @@ bool ScrollView::handleMouseButton(const event::MouseButtonEvent& evt) {
         auto hThumb = getHorizontalThumbRect();
 
         bool inVThumb = evt.position.x >= vThumb.x && 
-                        evt.position.x < vThumb.getRight() &&
+                        evt.position.x < static_cast<int32_t>(vThumb.getRight()) &&
                         evt.position.y >= vThumb.y && 
-                        evt.position.y < vThumb.getBottom();
+                        evt.position.y < static_cast<int32_t>(vThumb.getBottom());
 
         bool inHThumb = evt.position.x >= hThumb.x && 
-                        evt.position.x < hThumb.getRight() &&
+                        evt.position.x < static_cast<int32_t>(hThumb.getRight()) &&
                         evt.position.y >= hThumb.y && 
-                        evt.position.y < hThumb.getBottom();
+                        evt.position.y < static_cast<int32_t>(hThumb.getBottom());
 
         if (inVThumb) {
             draggingVScroll_ = true;
@@ -449,7 +449,7 @@ Point<int32_t> ScrollView::translateToContentSpace(const Point<int32_t>& screenP
     );
 }
 
-event::Event ScrollView::translateEvent(const event::Event& event) const {
+std::optional<event::Event> ScrollView::translateEvent(const event::Event& event) const {
     // Transform mouse events to content space
     if (auto* mouseMove = std::get_if<event::MouseMoveEvent>(&event)) {
         event::MouseMoveEvent transformed = *mouseMove;
@@ -469,7 +469,7 @@ event::Event ScrollView::translateEvent(const event::Event& event) const {
         return transformed;
     }
 
-    return event;
+    return std::nullopt;
 }
 
 // ============================================================================
@@ -481,9 +481,9 @@ bool ScrollView::isPointInVerticalScrollbar(const Point<int32_t>& point) const {
     if (thumbRect.w == 0) return false;
 
     return point.x >= thumbRect.x && 
-           point.x < thumbRect.getRight() &&
+           point.x < static_cast<int32_t>(thumbRect.getRight()) &&
            point.y >= thumbRect.y && 
-           point.y < thumbRect.getBottom();
+           point.y < static_cast<int32_t>(thumbRect.getBottom());
 }
 
 bool ScrollView::isPointInHorizontalScrollbar(const Point<int32_t>& point) const {
@@ -491,9 +491,9 @@ bool ScrollView::isPointInHorizontalScrollbar(const Point<int32_t>& point) const
     if (thumbRect.h == 0) return false;
 
     return point.x >= thumbRect.x && 
-           point.x < thumbRect.getRight() &&
+           point.x < static_cast<int32_t>(thumbRect.getRight()) &&
            point.y >= thumbRect.y && 
-           point.y < thumbRect.getBottom();
+           point.y < static_cast<int32_t>(thumbRect.getBottom());
 }
 
 } // namespace frqs::widget

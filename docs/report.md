@@ -700,3 +700,22 @@ User types "hello"
  Works with bold/italic variants
  No performance regression
  Graceful fallback when DirectWrite unavailable
+
+### Report 5 (17-12-2025) - Asinkronisasi Visual ScrollView
+[Bug] Konten Tidak Mengikuti Posisi Scrollbar
+Tanggal: 17 Desember 2025 Komponen: Widget (ScrollView) & Renderer Severity: High (Fungsionalitas Visual Rusak)
+
+Deskripsi Masalah
+Terdapat ketidaksesuaian (desync) antara posisi indikator scrollbar dengan posisi konten yang dirender. Saat pengguna melakukan scrolling (baik menggunakan roda mouse atau menarik scrollbar), thumb (kotak indikator) pada scrollbar bergerak turun/naik sesuai input, namun konten di dalam viewport (seperti daftar tombol) tetap diam di posisi semula atau tidak bergeser sejauh yang seharusnya.
+
+Bukti Visual
+Dalam pengujian, ketika scrollbar ditarik sampai ke posisi paling bawah, konten yang tampil di layar masih menunjukkan elemen paling atas (misal: "Button #01"), padahal seharusnya menampilkan elemen paling bawah.
+
+Analisis Teknis
+Masalah ini adalah efek samping dari kegagalan kompilasi/implementasi pada arsitektur Renderer (lihat bug sebelumnya):
+
+Kegagalan Transformasi Koordinat: ScrollView mengandalkan metode renderer->translate(-scrollX, -scrollY) untuk menggeser seluruh kontennya sebelum digambar.
+
+Fungsi translate Tidak Efektif: Karena kesalahan definisi fungsi translate di interface IExtendedRenderer (yang tercampur dengan kode implementasi), pemanggilan fungsi ini kemungkinan gagal dikompilasi dengan benar atau tidak memanggil implementasi Direct2D yang sesungguhnya di RendererD2D.
+
+Hasil Akhir: Logika ScrollView berhasil memperbarui variabel scrollOffset_ (makanya scrollbar bergerak), namun instruksi untuk "menggeser kanvas gambar" tidak sampai ke GPU/Renderer. Akibatnya, konten digambar ulang terus-menerus di koordinat (0,0) relatif terhadap viewport.

@@ -98,6 +98,8 @@ public:
     void setTransform(float m11, float m12, float m21, float m22,
                      float dx, float dy) override;
 
+	void translate(float dx, float dy) override;
+
     // ========================================================================
     // TEXT MEASUREMENT (NEW!)
     // ========================================================================

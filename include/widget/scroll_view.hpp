@@ -103,7 +103,7 @@ private:
 
     // Coordinate transformation
     Point<int32_t> translateToContentSpace(const Point<int32_t>& screenPoint) const;
-    event::Event translateEvent(const event::Event& event) const;
+    std::optional<event::Event> translateEvent(const event::Event& event) const;
 
     // Hit testing
     bool isPointInVerticalScrollbar(const Point<int32_t>& point) const;
