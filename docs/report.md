@@ -1045,3 +1045,30 @@ Tombol yang tadinya di-hover ikut terbawa naik/turun (karena dia tidak tahu kurs
 Tombol baru yang masuk ke bawah kursor tidak nyala (karena dia belum dapat sinyal kalau ada mouse di atasnya).
 
 Kapan Sembuh?: Masalahnya baru "sembuh" saat kamu menggerakkan mouse sedikit (memicu WM_MOUSEMOVE asli) atau melakukan event lain (seperti klik), yang memaksa sistem menghitung ulang posisi.
+
+### Report 7 (18-12-2025) - Asinkronisasi Visual ScrollView advance 3
+
+🐛 Bug Report: Hover State Freeze Pasca-Scrolling
+Deskripsi Masalah: Terjadi kegagalan pembaruan status hover (sorotan) pada widget tombol segera setelah aktivitas scrolling berhenti. Sistem seolah-olah "terkunci" pada status scroll dan mengabaikan pergerakan mouse (MouseMove) yang terjadi setelahnya.
+
+Perilaku yang Diamati (Observed Behavior):
+
+Saat Idle (Awal): Hover berfungsi normal. Tombol menyala saat kursor di atasnya.
+
+Saat Scrolling (MouseWheel): Hover berfungsi dengan baik. Tombol di bawah kursor menyala secara dinamis mengikuti pergeseran konten (ini berkat fungsi recheckHover yang kita perbaiki sebelumnya).
+
+Setelah Stop Scroll (Masalahnya Disini): Saat roda mouse berhenti diputar dan user mulai menggerakkan mouse secara fisik ke tombol lain:
+
+Tombol yang terakhir disorot saat scrolling tetap menyala (stuck).
+
+Tombol baru yang dilewati kursor tidak merespons (tidak menyala).
+
+Sistem terasa seperti masih dalam "Mode Scroll" dan belum kembali ke "Mode Idle/Interaktif".
+
+Analisis Penyebab (Dugaan Zuu): Seperti yang kamu curigai soal "state diam vs state scroll", masalahnya kemungkinan besar ada pada Transisi Event:
+
+Saat scrolling, kita memaksakan update visual menggunakan synthetic event (recheckHover).
+
+Saat berhenti, sistem kembali mengandalkan event MouseMove asli dari Windows.
+
+Ada kemungkinan event MouseMove asli ini terblokir, tidak valid, atau dianggap redundan oleh logika Button atau ScrollView, sehingga state tombol tidak di-refresh sampai ada klik atau interaksi paksa lainnya.
