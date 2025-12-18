@@ -1072,3 +1072,79 @@ Saat scrolling, kita memaksakan update visual menggunakan synthetic event (reche
 Saat berhenti, sistem kembali mengandalkan event MouseMove asli dari Windows.
 
 Ada kemungkinan event MouseMove asli ini terblokir, tidak valid, atau dianggap redundan oleh logika Button atau ScrollView, sehingga state tombol tidak di-refresh sampai ada klik atau interaksi paksa lainnya.
+
+### Report 7 (18-12-2025) - Asinkronisasi Visual ScrollView advance 4
+
+1. Deskripsi Masalah
+Terdapat kegagalan sinkronisasi antara tampilan visual dan logika input pada ScrollView, yang menyebabkan dua gejala fatal:
+
+Ghost Hover (Offset): Area interaktif tombol tertinggal di posisi lama. Kursor harus diarahkan ke posisi "kosong" di atas tombol untuk menekannya.
+
+Hover Freeze (Stuck State): Saat scrolling berhenti, tombol yang sebelumnya di-hover tetap menyala, sementara tombol baru di bawah kursor tidak merespons sampai mouse digerakkan manual.
+
+2. Akar Masalah (Technical Root Cause)
+Masalah ini disebabkan oleh kombinasi dua faktor:
+
+A. Kegagalan Translasi Koordinat (The Math Issue): Saat meneruskan event (MouseMove, MouseButton) ke widget anak, ScrollView mengirimkan koordinat mentah (screen space) tanpa memperhitungkan scrollOffset.
+
+Logika Salah: child->onEvent(evt) → Koordinat Y tetap sama, padahal visual anak sudah digeser ke atas.
+
+Dampak: Widget anak mengira mouse berada di posisi relatif yang jauh lebih tinggi dari seharusnya.
+
+B. Event Starvation (The OS Issue): Windows tidak mengirimkan pesan WM_MOUSEMOVE ketika konten bergerak di bawah mouse yang diam (karena scroll roda).
+
+Dampak: Karena tidak ada event masuk, fungsi onEvent widget anak tidak dipanggil. Widget tidak tahu bahwa posisinya relatif terhadap mouse sudah berubah. Status hover pun menjadi "basi" (stale).
+
+3. Observasi Perilaku (Berdasarkan Bukti Video)
+Berikut adalah rincian kronologis dari anomali yang terjadi:
+
+Fase 1: Idle (Normal)
+
+Saat tidak ada aktivitas scroll, deteksi hover berfungsi sempurna. Kursor di atas tombol mengubah warna tombol menjadi lebih terang (Hover State). Klik terdaftar dengan koordinat yang benar.
+
+Fase 2: Active Scrolling (Mouse Wheel)
+
+Saat roda mouse diputar, konten bergerak naik/turun.
+
+Observasi: Widget yang melewati kursor mouse selama proses scroll sempat ter-trigger (berkedip/menyala), menandakan fungsi recheckHover internal sebenarnya sempat bekerja saat ada input delta scroll.
+
+Fase 3: Post-Scroll Freeze (Titik Kritis Bug)
+
+Kejadian: User berhenti memutar roda mouse (Stop Scrolling).
+
+Kondisi Visual: Konten berhenti bergerak. Kursor mouse diam di posisi layar yang sama, namun sekarang berada di atas widget yang berbeda (karena konten sudah bergeser).
+
+Anomali (Menit 00:55 - 00:57):
+
+Kursor mouse jelas terlihat berhenti tepat di atas "Button #099".
+
+Button #099 TIDAK bereaksi. Warnanya tetap warna dasar (Normal State), tidak berubah menjadi warna sorotan (Hover State).
+
+Sistem seolah-olah tidak sadar bahwa di bawah kursor sekarang ada tombol baru.
+
+Status Hover Lama (Stuck): Pada beberapa percobaan (menit 00:15), tombol yang sebelumnya di-hover sebelum scroll (posisi lama) terkadang masih menyala sesaat, menciptakan "Ghost Hover".
+
+Fase 4: Wake-Up (Resolusi Manual)
+
+Kejadian: User menggeser mouse sedikit saja (pixel-perfect nudge) pada menit 00:58.
+
+Reaksi Sistem: Seketika itu juga Button #099 menyala (Hover State aktif).
+
+Kesimpulan: State hover baru ter-update hanya jika ada trigger eksternal dari hardware mouse (WM_MOUSEMOVE), bukan dari perubahan posisi konten internal.
+
+4. Rencana Perbaikan (Solution Plan)
+Implementasi Inverse Transform: Pada ScrollView::onEvent, sebelum meneruskan event ke content_, koordinat harus dikonversi ke Content Space:
+
+``` C++
+
+// Rumus: ContentPos = ScreenPos - ViewportPos + ScrollOffset
+evt.position.y = evt.position.y - rect.y + scrollOffset_.y;
+```
+
+Synthetic Event Injection: Buat fungsi helper (misal: recheckHover()) yang dipanggil setiap kali nilai scroll berubah (scrollBy/scrollTo). Fungsi ini harus:
+
+Mengambil posisi mouse terakhir yang valid (lastMousePos).
+
+Melakukan transformasi koordinat manual.
+
+Memaksa pengiriman event MouseMove buatan ke content_ agar state hover diperbarui seketika, meskipun mouse fisik tidak bergerak.
