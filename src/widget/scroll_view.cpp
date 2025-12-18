@@ -1,8 +1,9 @@
-// src/widget/scroll_view.cpp - FINAL FIXED VERSION (Report 7 Bug Fix)
+// src/widget/scroll_view.cpp - FINAL FIXED VERSION (Report 7 Complete Fix)
 #include "widget/scroll_view.hpp"
 #include "render/renderer.hpp"
 #include <algorithm>
 #include <cmath>
+#include <chrono>
 
 namespace frqs::widget {
 
@@ -47,12 +48,34 @@ void ScrollView::scrollTo(float x, float y) {
     invalidate();
 }
 
+void ScrollView::scrollBy(float dx, float dy) {
+    scrollOffset_.x += dx;
+    scrollOffset_.y += dy;
+    clampScrollOffset();
+    
+    // ✅ FIX: Recheck hover to update button states after scroll
+    recheckHover();
+    
+    // ✅ FIX: Force invalidate content to ensure all children re-render with updated states
+    if (content_) {
+        if (auto* contentWidget = dynamic_cast<Widget*>(content_.get())) {
+            contentWidget->invalidate();
+        }
+    }
+    
+    invalidate();
+}
+
 void ScrollView::recheckHover() {
+    // ✅ FIX Report 7: Create complete synthetic event with valid timestamp
+    // This ensures consistency with real MouseMove events from Windows
     event::MouseMoveEvent synthEvent;
     synthEvent.position = lastMousePos_; 
     synthEvent.delta = Point<int32_t>(0, 0); 
     synthEvent.modifiers = 0; 
-    synthEvent.timestamp = 0;
+    synthEvent.timestamp = static_cast<uint64_t>(
+        std::chrono::steady_clock::now().time_since_epoch().count()
+    );
 
     auto viewport = getViewportRect();
     bool insideViewport = 
@@ -62,18 +85,15 @@ void ScrollView::recheckHover() {
         lastMousePos_.y < static_cast<int32_t>(viewport.getBottom());
 
     if (insideViewport && content_) {
+        // ✅ FIX Report 7: Transform coordinates to content space
         event::MouseMoveEvent transformed = synthEvent;
         transformed.position = translateToContentSpace(synthEvent.position);
-        content_->onEvent(transformed);
+        
+        // ✅ FIX Report 7: Explicitly wrap in Event variant for proper propagation
+        // This ensures the event is handled consistently with real events
+        event::Event contentEvent = transformed;
+        content_->onEvent(contentEvent);
     }
-}
-
-void ScrollView::scrollBy(float dx, float dy) {
-    scrollOffset_.x += dx;
-    scrollOffset_.y += dy;
-    clampScrollOffset();
-	recheckHover();
-    invalidate();
 }
 
 void ScrollView::scrollToBottom() {
@@ -91,10 +111,6 @@ void ScrollView::setRect(const Rect<int32_t, uint32_t>& rect) {
     updateContentSize();
     clampScrollOffset();
 }
-
-// ============================================================================
-// ✅ FINAL FIX: Complete Event Coordinate Translation + Mouse Position Tracking
-// ============================================================================
 
 bool ScrollView::onEvent(const event::Event& event) {
     if (auto* wheelEvt = std::get_if<event::MouseWheelEvent>(&event)) {
@@ -118,7 +134,7 @@ bool ScrollView::onEvent(const event::Event& event) {
             event::Event contentEvent = transformed;
             return content_->onEvent(contentEvent);
         }
-		return false;
+        return false;
     }
 
     // Mouse button (for scrollbar dragging)
@@ -150,7 +166,7 @@ bool ScrollView::onEvent(const event::Event& event) {
                 return content_->onEvent(contentEvent);
             }
         }
-		return false;
+        return false;
     }
 
     // Mouse move (for scrollbar hover and content interaction)
@@ -184,7 +200,7 @@ bool ScrollView::onEvent(const event::Event& event) {
                 return content_->onEvent(contentEvent);
             }
         }
-		return false;
+        return false;
     }
 
     // For other events (keyboard, etc.), pass directly to content
@@ -493,7 +509,7 @@ bool ScrollView::handleMouseMove(const event::MouseMoveEvent& evt) {
 }
 
 // ============================================================================
-// ✅ COORDINATE TRANSFORMATION (The Core Fix)
+// ✅ COORDINATE TRANSFORMATION (The Core Fix for Report 7)
 // ============================================================================
 
 Point<int32_t> ScrollView::translateToContentSpace(const Point<int32_t>& screenPoint) const {
