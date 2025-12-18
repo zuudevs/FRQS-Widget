@@ -4,7 +4,6 @@
 // This header provides additional rendering utilities
 
 #include "../widget/iwidget.hpp"
-#include <numbers>
 
 namespace frqs::render {
 
@@ -102,6 +101,10 @@ public:
                            const FontStyle& font,
                            TextAlign halign = TextAlign::Left,
                            VerticalAlign valign = VerticalAlign::Top) = 0;
+						   
+	virtual void drawBitmap(void* bitmap, 
+						const widget::Rect<int32_t, uint32_t>& destRect,
+						float opacity = 1.0f) = 0;
 
     // State management (extended)
     virtual void save() = 0;

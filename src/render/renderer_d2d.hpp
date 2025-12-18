@@ -17,6 +17,7 @@ private:
     ID2D1HwndRenderTarget* renderTarget_ = nullptr;
     IDWriteFactory* writeFactory_ = nullptr;
     IDWriteTextFormat* defaultTextFormat_ = nullptr;
+	IWICImagingFactory* wicFactory_ = nullptr;
     
     // State
     platform::NativeHandle hwnd_;

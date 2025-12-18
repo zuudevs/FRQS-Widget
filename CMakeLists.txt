@@ -103,6 +103,8 @@ set(HEADERS_PUBLIC
     include/widget/text_input.hpp
     include/widget/internal.hpp
     include/widget/scroll_view.hpp
+	include/widget/checkbox.hpp
+	include/widget/image.hpp
     
     # Render
     include/render/dirty_rect.hpp
@@ -141,6 +143,8 @@ set(SOURCES_IMPL
     src/widget/slider.cpp
     src/widget/text_input.cpp
     src/widget/scroll_view.cpp
+	src/widget/checkbox.cpp
+	src/widget/image.cpp
     
     # Render
     src/render/renderer_d2d.cpp
@@ -348,6 +352,21 @@ if(BUILD_EXAMPLES)
     # Scroll Demo
     add_executable(scroll_view_demo
         examples/scroll_view_demo.cpp
+    )
+
+    target_link_libraries(scroll_view_demo
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+
+    target_include_directories(scroll_view_demo
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+
+	# checkbox and image Demo
+    add_executable(image_and_checkbox_demo
+        examples/image_and_checkbox_demo.cpp
     )
 
     target_link_libraries(scroll_view_demo
