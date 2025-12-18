@@ -47,10 +47,32 @@ void ScrollView::scrollTo(float x, float y) {
     invalidate();
 }
 
+void ScrollView::recheckHover() {
+    event::MouseMoveEvent synthEvent;
+    synthEvent.position = lastMousePos_; 
+    synthEvent.delta = Point<int32_t>(0, 0); 
+    synthEvent.modifiers = 0; 
+    synthEvent.timestamp = 0;
+
+    auto viewport = getViewportRect();
+    bool insideViewport = 
+        lastMousePos_.x >= viewport.x && 
+        lastMousePos_.x < static_cast<int32_t>(viewport.getRight()) &&
+        lastMousePos_.y >= viewport.y && 
+        lastMousePos_.y < static_cast<int32_t>(viewport.getBottom());
+
+    if (insideViewport && content_) {
+        event::MouseMoveEvent transformed = synthEvent;
+        transformed.position = translateToContentSpace(synthEvent.position);
+        content_->onEvent(transformed);
+    }
+}
+
 void ScrollView::scrollBy(float dx, float dy) {
     scrollOffset_.x += dx;
     scrollOffset_.y += dy;
     clampScrollOffset();
+	recheckHover();
     invalidate();
 }
 
@@ -75,11 +97,6 @@ void ScrollView::setRect(const Rect<int32_t, uint32_t>& rect) {
 // ============================================================================
 
 bool ScrollView::onEvent(const event::Event& event) {
-    // ========================================================================
-    // STEP 1: Handle scrollbar interactions (NO coordinate transformation)
-    // ========================================================================
-    
-    // Mouse wheel - prioritize scrollbar if cursor is on it
     if (auto* wheelEvt = std::get_if<event::MouseWheelEvent>(&event)) {
         auto vScrollbar = getVerticalScrollbarRect();
         auto hScrollbar = getHorizontalScrollbarRect();
@@ -99,10 +116,9 @@ bool ScrollView::onEvent(const event::Event& event) {
             event::MouseWheelEvent transformed = *wheelEvt;
             transformed.position = translateToContentSpace(wheelEvt->position);
             event::Event contentEvent = transformed;
-            if (content_->onEvent(contentEvent)) {
-                return true;
-            }
+            return content_->onEvent(contentEvent);
         }
+		return false;
     }
 
     // Mouse button (for scrollbar dragging)
@@ -128,12 +144,10 @@ bool ScrollView::onEvent(const event::Event& event) {
                 event::MouseButtonEvent transformed = *btnEvt;
                 transformed.position = translateToContentSpace(btnEvt->position);
                 event::Event contentEvent = transformed;
-                
-                if (content_->onEvent(contentEvent)) {
-                    return true;
-                }
+                return content_->onEvent(contentEvent);
             }
         }
+		return false;
     }
 
     // Mouse move (for scrollbar hover and content interaction)
@@ -161,22 +175,18 @@ bool ScrollView::onEvent(const event::Event& event) {
                 // Delta remains unchanged (relative movement)
                 transformed.delta = moveEvt->delta;
                 event::Event contentEvent = transformed;
-                
-                if (content_->onEvent(contentEvent)) {
-                    return true;
-                }
+                return content_->onEvent(contentEvent);
             }
         }
+		return false;
     }
 
     // For other events (keyboard, etc.), pass directly to content
     if (content_) {
-        if (content_->onEvent(event)) {
-            return true;
-        }
+        return content_->onEvent(event);
     }
 
-    return Widget::onEvent(event);
+    return false;
 }
 
 void ScrollView::render(Renderer& renderer) {

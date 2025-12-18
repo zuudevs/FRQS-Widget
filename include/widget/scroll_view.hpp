@@ -73,6 +73,7 @@ private:
     bool draggingHScroll_ = false;
     bool hoveringVScroll_ = false;
     bool hoveringHScroll_ = false;
+	Point<int32_t> lastMousePos_{};
     Point<int32_t> dragStartPos_;
     float dragStartOffset_ = 0.0f;
 
@@ -103,6 +104,7 @@ private:
     bool handleMouseMove(const event::MouseMoveEvent& evt);
 
     Point<int32_t> translateToContentSpace(const Point<int32_t>& screenPoint) const;
+	void recheckHover();
 
     // Hit testing
     bool isPointInVerticalScrollbar(const Point<int32_t>& point) const;

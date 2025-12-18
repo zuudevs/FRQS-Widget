@@ -1031,3 +1031,17 @@ Kesimpulan: ScrollView gagal melakukan translasi balik (inverse translation) dar
 ### Report 7 (17-12-2025) - Asinkronisasi Visual ScrollView advance
 
 [Bug] Koordinat Hover Offset: Disparitas Posisi Visual vs Logikal pada ScrollViewTanggal: 18 Desember 2025Komponen: src/widget/scroll_view.cpp (Event Translation Logic)Severity: High (UX/Interaksi Rusak Total)Deskripsi MasalahTerdapat pergeseran (offset) signifikan antara posisi kursor mouse dengan area interaksi (hitbox) widget di dalam ScrollView. Saat pengguna melakukan scrolling, elemen visual bergerak dengan benar, namun area deteksi hover/klik tertinggal di posisi semula. Hal ini menyebabkan fenomena "Ghost Hover", di mana widget yang menyala (highlighted) adalah widget yang berada jauh di atas posisi kursor sebenarnya.Bukti Visual (Observasi dari Video)Skenario: Daftar tombol di-scroll ke bawah (konten visual naik).Kejadian: Kursor mouse diarahkan ke area kosong di bagian bawah viewport (secara visual di bawah "Button #07").Anomali: Tombol yang merespons hover justru "Button #03" atau "Button #04" yang berada di bagian atas.Kesimpulan: Jarak antara kursor dan tombol yang menyala setara dengan jumlah pixel yang telah di-scroll.Analisis Teknis (Root Cause)Masalah ini disebabkan oleh kegagalan penerapan Translasi Balik Koordinat (Inverse Coordinate Translation) pada sistem event:Visual Rendering (Benar):Renderer menggunakan transformasi translate(0, -scrollOffset.y) untuk menggambar konten.Rumus Visual: $Y_{screen} = Y_{content} - Offset$Input Handling (Salah):Saat meneruskan event input ke anak (content_), ScrollView mengirimkan koordinat mentah tanpa mengkompensasi scroll offset.Logika Saat Ini: $Y_{input\_to\_child} = Y_{screen}$Dampak: Container (anak) mencari widget di koordinat $Y_{screen}$ (posisi kecil/atas), padahal elemen yang terlihat di situ sebenarnya memiliki koordinat $Y_{content}$ (posisi besar/bawah).Koreksi Matematis:Event input harus ditranslasi ke "Content Space" sebelum diteruskan.Rumus Seharusnya: $Y_{input\_to\_child} = Y_{screen} + Offset$
+
+### Report 7 (18-12-2025) - Asinkronisasi Visual ScrollView advance 2
+
+Akar Masalah: Saat kamu melakukan scrolling (putar roda mouse), yang bergerak itu kontennya, bukan mouse-nya. Karena kursor mouse secara fisik diam di tempat, Windows TIDAK mengirimkan event WM_MOUSEMOVE.
+
+Efek Samping: Karena tidak ada event mouse move, ScrollView tidak memicu pengecekan ulang (hit-test). Sistem masih "berpikir" mouse berada di posisi relatif yang lama terhadap konten.
+
+Visual Error:
+
+Tombol yang tadinya di-hover ikut terbawa naik/turun (karena dia tidak tahu kursornya sudah "pindah" secara relatif).
+
+Tombol baru yang masuk ke bawah kursor tidak nyala (karena dia belum dapat sinyal kalau ada mouse di atasnya).
+
+Kapan Sembuh?: Masalahnya baru "sembuh" saat kamu menggerakkan mouse sedikit (memicu WM_MOUSEMOVE asli) atau melakukan event lain (seperti klik), yang memaksa sistem menghitung ulang posisi.
