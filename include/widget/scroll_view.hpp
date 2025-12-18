@@ -73,7 +73,11 @@ private:
     bool draggingHScroll_ = false;
     bool hoveringVScroll_ = false;
     bool hoveringHScroll_ = false;
-	Point<int32_t> lastMousePos_{};
+    
+    // ✅ FIX: Track mouse position in both spaces
+    Point<int32_t> lastMouseScreenPos_{-1, -1};  // Screen/viewport coordinates
+    Point<int32_t> lastMouseContentPos_{-1, -1}; // Content coordinates (after transform)
+    
     Point<int32_t> dragStartPos_;
     float dragStartOffset_ = 0.0f;
 
