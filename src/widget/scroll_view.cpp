@@ -1,4 +1,4 @@
-// src/widget/scroll_view.cpp - FINAL FIXED VERSION
+// src/widget/scroll_view.cpp - FINAL FIXED VERSION (Report 7 Bug Fix)
 #include "widget/scroll_view.hpp"
 #include "render/renderer.hpp"
 #include <algorithm>
@@ -93,7 +93,7 @@ void ScrollView::setRect(const Rect<int32_t, uint32_t>& rect) {
 }
 
 // ============================================================================
-// ✅ FINAL FIX: Complete Event Coordinate Translation
+// ✅ FINAL FIX: Complete Event Coordinate Translation + Mouse Position Tracking
 // ============================================================================
 
 bool ScrollView::onEvent(const event::Event& event) {
@@ -123,6 +123,9 @@ bool ScrollView::onEvent(const event::Event& event) {
 
     // Mouse button (for scrollbar dragging)
     if (auto* btnEvt = std::get_if<event::MouseButtonEvent>(&event)) {
+        // ✅ FIX: Update lastMousePos for button events
+        lastMousePos_ = btnEvt->position;
+        
         // Check scrollbar interaction first
         if (handleMouseButton(*btnEvt)) {
             return true;
@@ -152,6 +155,9 @@ bool ScrollView::onEvent(const event::Event& event) {
 
     // Mouse move (for scrollbar hover and content interaction)
     if (auto* moveEvt = std::get_if<event::MouseMoveEvent>(&event)) {
+        // ✅ FIX: Always update lastMousePos on mouse move
+        lastMousePos_ = moveEvt->position;
+        
         // Handle scrollbar interaction first
         if (handleMouseMove(*moveEvt)) {
             return true;
@@ -382,6 +388,9 @@ bool ScrollView::handleMouseWheel(const event::MouseWheelEvent& evt) {
                   evt.position.y < static_cast<int32_t>(viewport.getBottom());
 
     if (!inside) return false;
+
+    // ✅ FIX: Update lastMousePos before scrolling
+    lastMousePos_ = evt.position;
 
     float delta = static_cast<float>(evt.delta);
     float scrollAmount = -delta / 4.0f;

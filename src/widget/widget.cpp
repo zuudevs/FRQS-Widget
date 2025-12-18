@@ -1,3 +1,4 @@
+// src/widget/widget.cpp - COMPLETE FILE dengan EVENT HANDLING FIX
 #include "widget/iwidget.hpp"
 #include "core/window.hpp"
 #include "platform/win32_safe.hpp"
@@ -17,7 +18,7 @@ struct Widget::Impl {
     std::vector<std::shared_ptr<IWidget>> children;
     HWND windowHandle = nullptr;
     
-    // Layout properties (NEW!)
+    // Layout properties
     LayoutProps layoutProps;
     
     Impl() = default;
@@ -72,14 +73,13 @@ bool Widget::isVisible() const noexcept {
 }
 
 // ============================================================================
-// LAYOUT PROPERTIES (NEW!)
+// LAYOUT PROPERTIES
 // ============================================================================
 
 void Widget::setLayoutWeight(float weight) noexcept {
     if (pImpl_->layoutProps.weight == weight) return;
     pImpl_->layoutProps.weight = weight;
     
-    // Notify parent to re-layout (cast to Widget* to access invalidate)
     if (pImpl_->parent) {
         if (auto* parentWidget = dynamic_cast<Widget*>(pImpl_->parent)) {
             parentWidget->invalidate();
@@ -170,14 +170,30 @@ LayoutProps& Widget::getLayoutPropsMut() noexcept {
 }
 
 // ============================================================================
-// EVENT HANDLING
+// EVENT HANDLING - FIXED VERSION
 // ============================================================================
 
 bool Widget::onEvent(const event::Event& event) {
-    // Base implementation: propagate to children
+    // ✅ CRITICAL FIX: For mouse move events, dispatch to ALL children
+    // This ensures hover states are updated correctly
+    if (std::holds_alternative<event::MouseMoveEvent>(event)) {
+        bool handled = false;
+        
+        // Send to ALL children (don't stop at first handler)
+        for (auto& child : pImpl_->children) {
+            if (child->onEvent(event)) {
+                handled = true;
+                // ✅ Continue to other children!
+            }
+        }
+        
+        return handled;
+    }
+    
+    // ✅ For other events (click, key, wheel, etc), stop at first handler
     for (auto& child : pImpl_->children) {
         if (child->onEvent(event)) {
-            return true;  // Event handled by child
+            return true;  // Event handled, stop propagation
         }
     }
     
