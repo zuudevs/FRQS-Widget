@@ -1148,3 +1148,41 @@ Mengambil posisi mouse terakhir yang valid (lastMousePos).
 Melakukan transformasi koordinat manual.
 
 Memaksa pengiriman event MouseMove buatan ke content_ agar state hover diperbarui seketika, meskipun mouse fisik tidak bergerak.
+
+---
+
+### Report 7 (18-12-2025) - ScrollView Visual Desync & Rendering Fixes
+**Problem:** ScrollView interaktif secara logika tetapi visual tidak sinkron ("Ghost Hover" & "Dormant Hover").
+
+**Symptoms:**
+1. **Ghost Hover:** Highlight tombol tertinggal di posisi lama saat scroll.
+2. **Dormant Hover (Critical):** Logika debug mendeteksi mouse di atas tombol (misal: Button #100), tapi tombol tidak berubah warna (tetap *Normal*) sampai dipancing dengan scroll sedikit.
+3. **Dead Zone:** Sisi kanan tombol tidak merespons hover karena adanya padding container.
+
+**Root Causes:**
+1. **Event Starvation:** Windows tidak mengirim `WM_MOUSEMOVE` saat konten bergerak di bawah mouse yang diam.
+2. **Coordinate Mismatch:** Event dikirim dalam *Screen Space* tanpa konversi ke *Content Space*.
+3. **Invalidation Culling (Rendering Bug):** - Saat tombol di posisi konten Y=5000 berubah state (Hover), ia memanggil `invalidate()`.
+   - Windows/D2D menganggap Rect(0, 5000, ...) berada jauh di luar Viewport (tinggi 500px).
+   - Request gambar ulang **dibuang (culled)** oleh OS, menyebabkan visual "beku" padahal logika sudah benar.
+
+**The Fixes:**
+1. **Synthetic Event Injection:** Implementasi `recheckHover()` untuk menyuntikkan event mouse buatan setiap kali nilai scroll berubah.
+2. **Inverse Transform:** Mengonversi koordinat input: `ContentPos = ScreenPos - ViewportPos + ScrollOffset`.
+3. **Force Viewport Redraw:**
+   - Memodifikasi `ScrollView::onEvent` untuk menangkap return value dari `content_->onEvent()`.
+   - Jika child widget menangani event (`handled == true`), ScrollView memanggil `this->invalidate()` untuk memaksa gambar ulang seluruh area viewport yang terlihat.
+4. **Layout Adjustment:** Mengubah `createFlexColumn(5, 0)` (Padding 0) di demo untuk menghilangkan *dead zone* di pinggir kanan.
+
+**Code Implementation (ScrollView::onEvent):**
+```cpp
+// [FIX VITAL] Tangkap apakah anak memproses hover
+bool handled = content_->onEvent(event::Event(transformed));
+
+// [FIX VITAL] JIKA ANAK BERUBAH (Normal -> Hover), PAKSA REDRAW!
+// Tanpa ini, Windows membuang request gambar anak karena koordinatnya jauh (clipping).
+// Dengan ini, ScrollView (Viewport) yang minta digambar ulang.
+if (handled) {
+    invalidate();
+}
+return handled;
