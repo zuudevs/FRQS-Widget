@@ -1,4 +1,24 @@
-#include "../../include/widget/button.hpp"
+// ============================================================================
+// DEBUG CONFIGURATION
+// 0: Off, 1: Click Only, 2: +Hover Enter, 3: +Hover Leave, 4: +Raw Details
+// ============================================================================
+#define FRQS_DEBUG_LEVEL 3
+
+#include "widget/button.hpp"
+
+// Setup Logging Macro
+#if defined(FRQS_DEBUG_LEVEL) && FRQS_DEBUG_LEVEL > 0
+    #include <print>
+    #include <string>
+    // Helper untuk konversi wstring ke string (biar println ga ngamuk)
+    inline std::string to_string(const std::wstring& ws) {
+        return std::string(ws.begin(), ws.end());
+    }
+    #define DBG_LOG(lvl, ...) \
+        if constexpr (FRQS_DEBUG_LEVEL >= lvl) std::println(__VA_ARGS__)
+#else
+    #define DBG_LOG(lvl, ...) ((void)0)
+#endif
 
 namespace frqs::widget {
 
@@ -62,8 +82,8 @@ Color Button::getCurrentColor() const noexcept {
 
 bool Button::isPointInside(const Point<int32_t>& point) const noexcept {
     auto rect = getRect();
-    return point.x >= rect.x && point.x < rect.getRight() &&
-           point.y >= rect.y && point.y < rect.getBottom();
+    return point.x >= rect.x && point.x < static_cast<int32_t>(rect.getRight()) &&
+           point.y >= rect.y && point.y < static_cast<int32_t>(rect.getBottom());
 }
 
 bool Button::onEvent(const event::Event& event) {
@@ -82,6 +102,11 @@ bool Button::onEvent(const event::Event& event) {
                     if (isPointInside(mouseBtn->position)) {
                         // Button was clicked!
                         if (onClick_) {
+                            // LEVEL 1: Click Event (Paling penting)
+                            #if defined(FRQS_DEBUG_LEVEL) && FRQS_DEBUG_LEVEL >= 1
+                            DBG_LOG(1, "[Button] '{}' CLICKED!", to_string(text_));
+                            #endif
+                            
                             onClick_();
                         }
                         setState(State::Hovered);
@@ -101,12 +126,23 @@ bool Button::onEvent(const event::Event& event) {
         bool inside = isPointInside(mouseMove->position);
         
         if (state_ == State::Pressed) {
-            // Keep pressed state while dragging
             return true;
         } else if (inside && state_ == State::Normal) {
+            // LEVEL 2: Enter Hover (Diagnosa Ghost Hover)
+            #if defined(FRQS_DEBUG_LEVEL) && FRQS_DEBUG_LEVEL >= 2
+            DBG_LOG(2, "[Button] '{}' ENTER Hover. Mouse: ({}, {})", 
+                to_string(text_), mouseMove->position.x, mouseMove->position.y);
+            #endif
+            
             setState(State::Hovered);
             return true;
         } else if (!inside && state_ == State::Hovered) {
+            // LEVEL 3: Leave Hover (Diagnosa salah koordinat)
+            #if defined(FRQS_DEBUG_LEVEL) && FRQS_DEBUG_LEVEL >= 3
+            DBG_LOG(3, "[Button] '{}' LEAVE Hover. Mouse: ({}, {})", 
+                to_string(text_), mouseMove->position.x, mouseMove->position.y);
+            #endif
+            
             setState(State::Normal);
             return true;
         }

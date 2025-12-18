@@ -18,10 +18,10 @@ namespace frqs::widget {
     if (!widget) return false;
     
     auto rect = widget->getRect();
-    return point.x >= rect.x &&
-           point.x < rect.getRight() &&
-           point.y >= rect.y &&
-           point.y < rect.getBottom();
+    return point.x >= static_cast<int32_t>(rect.x) &&
+           point.x < static_cast<int32_t>(rect.getRight()) &&
+           point.y >= static_cast<int32_t>(rect.y) &&
+           point.y < static_cast<int32_t>(rect.getBottom());
 }
 
 // Find widget at position (recursive search)

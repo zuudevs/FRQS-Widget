@@ -2,7 +2,6 @@
 #pragma once
 
 #include "iwidget.hpp"
-#include "render/renderer.hpp"
 #include <memory>
 
 namespace frqs::widget {
@@ -74,9 +73,8 @@ private:
     bool hoveringVScroll_ = false;
     bool hoveringHScroll_ = false;
     
-    // ✅ FIX: Track mouse position in both spaces
-    Point<int32_t> lastMouseScreenPos_{-1, -1};  // Screen/viewport coordinates
-    Point<int32_t> lastMouseContentPos_{-1, -1}; // Content coordinates (after transform)
+    Point<int32_t> lastMouseScreenPos_{-1, -1};
+    Point<int32_t> lastMouseContentPos_{-1, -1};
     
     Point<int32_t> dragStartPos_;
     float dragStartOffset_ = 0.0f;

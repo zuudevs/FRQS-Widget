@@ -42,7 +42,7 @@ public :
 	constexpr Rect(Rect&&) noexcept = default ;
 	constexpr Rect& operator=(const Rect&) noexcept = default ;
 	constexpr Rect& operator=(Rect&&) noexcept = default ;
-	constexpr std::strong_ordering operator<=>(const Rect&) const noexcept = default ;
+	constexpr auto operator<=>(const Rect&) const noexcept = default ;
 	constexpr ~Rect() noexcept = default ;
     
 
@@ -143,8 +143,8 @@ public :
         auto t = std::max(getTop(), o.getTop()) ;
         auto r = std::min(getRight(), o.getRight()) ;
         auto b = std::min(getBottom(), o.getBottom()) ;
-        Ts w = (r > l) ? static_cast<Ts>(r - l) : Ts{0} ;
-        Ts h = (b > t) ? static_cast<Ts>(b - t) : Ts{0} ;
+        Ts w = (r > static_cast<uint32_t>(l)) ? static_cast<Ts>(r - l) : Ts{0} ;
+        Ts h = (b > static_cast<uint32_t>(t)) ? static_cast<Ts>(b - t) : Ts{0} ;
 
         return Rect(l, t, w, h) ;
     }

@@ -124,8 +124,8 @@ bool Slider::handleMouseButton(const event::MouseButtonEvent& evt) {
     if (evt.button == event::MouseButtonEvent::Button::Left) {
         if (evt.action == event::MouseButtonEvent::Action::Press) {
             auto rect = getRect();
-            bool inside = evt.position.x >= rect.x && evt.position.x < rect.getRight() &&
-                         evt.position.y >= rect.y && evt.position.y < rect.getBottom();
+            bool inside = evt.position.x >= rect.x && evt.position.x < static_cast<int32_t>(rect.getRight()) &&
+                         evt.position.y >= rect.y && evt.position.y < static_cast<int32_t>(rect.getBottom());
             
             if (inside) {
                 dragging_ = true;
@@ -152,8 +152,8 @@ bool Slider::handleMouseMove(const event::MouseMoveEvent& evt) {
     if (!enabled_) return false;
     
     auto rect = getRect();
-    bool inside = evt.position.x >= rect.x && evt.position.x < rect.getRight() &&
-                 evt.position.y >= rect.y && evt.position.y < rect.getBottom();
+    bool inside = evt.position.x >= rect.x && evt.position.x < static_cast<int32_t>(rect.getRight()) &&
+                 evt.position.y >= rect.y && evt.position.y < static_cast<int32_t>(rect.getBottom());
     
     if (dragging_) {
         updateValueFromPoint(evt.position);

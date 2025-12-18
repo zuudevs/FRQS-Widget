@@ -19,7 +19,7 @@ public :
 	constexpr Point(Point&&) noexcept = default ;
 	constexpr Point& operator=(const Point&) noexcept = default ;
 	constexpr Point& operator=(Point&&) noexcept = default ;
-	constexpr std::strong_ordering operator<=>(const Point&) const noexcept = default ;
+	constexpr auto operator<=>(const Point&) const noexcept = default ;
 	constexpr ~Point() noexcept = default ;
 
 	template <meta::numeric Tv>

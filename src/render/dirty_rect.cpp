@@ -35,10 +35,10 @@ bool rectsOverlap(
     const widget::Rect<int32_t, uint32_t>& a,
     const widget::Rect<int32_t, uint32_t>& b
 ) {
-    return !(a.getRight() <= b.getLeft() ||
-             b.getRight() <= a.getLeft() ||
-             a.getBottom() <= b.getTop() ||
-             b.getBottom() <= a.getTop());
+    return !(a.getRight() <= static_cast<uint32_t>(b.getLeft()) ||
+             b.getRight() <= static_cast<uint32_t>(a.getLeft()) ||
+             a.getBottom() <= static_cast<uint32_t>(b.getTop()) ||
+             b.getBottom() <= static_cast<uint32_t>(a.getTop()));
 }
 
 // Helper: Calculate overlap area

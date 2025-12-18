@@ -20,7 +20,7 @@ public :
 	constexpr Size(Size&&) noexcept = default ;
 	constexpr Size& operator=(const Size&) noexcept = default ;
 	constexpr Size& operator=(Size&&) noexcept = default ;
-	constexpr std::strong_ordering operator<=>(const Size&) const noexcept = default ;
+	constexpr auto operator<=>(const Size&) const noexcept = default ;
 	constexpr ~Size() noexcept = default ;
 
 	template <meta::numeric Tv>

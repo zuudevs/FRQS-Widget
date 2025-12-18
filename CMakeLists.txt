@@ -8,6 +8,24 @@ project(
 )
 
 # ============================================================================
+# OUTPUT DIRECTORIES (Menyimpan exe/pdb di folder 'bin' utama)
+# ============================================================================
+# Tentukan folder output relatif terhadap folder project utama (bukan build)
+set(OUTPUT_DIR ${CMAKE_SOURCE_DIR}/bin)
+set(LIB_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/lib)
+
+# Set global output directories
+set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIB_OUTPUT_DIR})
+set(CMAKE_PDB_OUTPUT_DIRECTORY ${OUTPUT_DIR})
+
+# Untuk Visual Studio (Multi-Config), kita paksa agar tidak membuat subfolder 
+# Debug/Release yang membingungkan, atau biarkan default (bin/Debug).
+# Di sini aku set base-nya saja, biasanya VS akan tetap membuat bin/Debug atau bin/Release.
+# Tapi setidaknya sudah keluar dari folder 'build'.
+
+# ============================================================================
 # C++ STANDARD
 # ============================================================================
 set(CMAKE_CXX_STANDARD 23)
@@ -83,8 +101,8 @@ set(HEADERS_PUBLIC
     include/widget/label.hpp
     include/widget/slider.hpp
     include/widget/text_input.hpp
-	include/widget/internal.hpp
-	include/widget/scroll_view.hpp
+    include/widget/internal.hpp
+    include/widget/scroll_view.hpp
     
     # Render
     include/render/dirty_rect.hpp
@@ -111,7 +129,7 @@ set(SOURCES_IMPL
     src/core/window.cpp
     src/core/window_registry.cpp
 
-	# Event
+    # Event
     src/event/event_bus.cpp
     src/event/event_dispatcher.cpp
     
@@ -122,15 +140,15 @@ set(SOURCES_IMPL
     src/widget/label.cpp
     src/widget/slider.cpp
     src/widget/text_input.cpp
-	src/widget/scroll_view.cpp
+    src/widget/scroll_view.cpp
     
     # Render
     src/render/renderer_d2d.cpp
-	src/render/dirty_rect.cpp
+    src/render/dirty_rect.cpp
     
     # Platform
     src/platform/win32_window.cpp
-	src/platform/message_queue.cpp
+    src/platform/message_queue.cpp
 )
 
 # ============================================================================
@@ -261,7 +279,7 @@ if(BUILD_TESTS)
             ${CMAKE_SOURCE_DIR}/include
     )
 
-	# Event system test
+    # Flex Layout test
     add_executable(flex_layout_test
         tests/flex_layout_test.cpp
     )
@@ -299,7 +317,7 @@ if(BUILD_EXAMPLES)
             ${CMAKE_SOURCE_DIR}/include
     )
 
-	add_executable(widget_demo
+    add_executable(widget_demo
         examples/widget_demo.cpp
     )
     
@@ -313,7 +331,7 @@ if(BUILD_EXAMPLES)
             ${CMAKE_SOURCE_DIR}/include
     )
 
-	add_executable(flex_layout
+    add_executable(flex_layout
         examples/flex_layout_demo.cpp
     )
     
@@ -327,20 +345,20 @@ if(BUILD_EXAMPLES)
             ${CMAKE_SOURCE_DIR}/include
     )
 
-	# Scroll Demo
-	add_executable(scroll_view_demo
-		examples/scroll_view_demo.cpp
-	)
+    # Scroll Demo
+    add_executable(scroll_view_demo
+        examples/scroll_view_demo.cpp
+    )
 
-	target_link_libraries(scroll_view_demo
-		PRIVATE
-			FRQS_WIDGET_LIB
-	)
+    target_link_libraries(scroll_view_demo
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
 
-	target_include_directories(scroll_view_demo
-		PRIVATE
-			${CMAKE_SOURCE_DIR}/include
-	)
+    target_include_directories(scroll_view_demo
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
 endif()
 
 # ============================================================================
@@ -390,29 +408,7 @@ message(STATUS "Version: ${PROJECT_VERSION}")
 message(STATUS "C++ Standard: C++${CMAKE_CXX_STANDARD}")
 message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
 message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
+message(STATUS "Output Directory: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
 message(STATUS "Build Tests: ${BUILD_TESTS}")
 message(STATUS "Build Examples: ${BUILD_EXAMPLES}")
-message(STATUS "========================================")
-message(STATUS "Implementation Status:")
-message(STATUS "  ✓ Headers: Complete")
-message(STATUS "  ✓ Widget: Implemented")
-message(STATUS "  ✓ Window: Implemented")
-message(STATUS "  ✓ Application: Implemented")
-message(STATUS "  ✓ Renderer: Implemented (Direct2D)")
-message(STATUS "  ✓ Platform: Implemented (Win32)")
-message(STATUS "========================================")
-message(STATUS "Executables:")
-message(STATUS "  - FRQS_WIDGET (main demo)")
-if(BUILD_TESTS)
-message(STATUS "  - unit_tests")
-message(STATUS "  - window_test")
-message(STATUS "  - event_test")
-message(STATUS "  - flex_layout_test")
-endif()
-if(BUILD_EXAMPLES)
-message(STATUS "  - hello_window")
-message(STATUS "  - widget_demo")
-message(STATUS "  - flex_layout")
-message(STATUS "  - scroll_demo")
-endif()
 message(STATUS "========================================")

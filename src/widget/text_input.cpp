@@ -290,8 +290,8 @@ size_t TextInput::getCursorPosFromPoint(const Point<int32_t>& point) const {
 
 bool TextInput::handleMouseEvent(const event::MouseButtonEvent& evt) {
     auto rect = getRect();
-    bool inside = evt.position.x >= rect.x && evt.position.x < rect.getRight() &&
-                  evt.position.y >= rect.y && evt.position.y < rect.getBottom();
+    bool inside = evt.position.x >= rect.x && evt.position.x < static_cast<int32_t>(rect.getRight()) &&
+                  evt.position.y >= rect.y && evt.position.y < static_cast<int32_t>(rect.getBottom());
     
     if (evt.action == event::MouseButtonEvent::Action::Press) {
         if (inside) {
