@@ -175,6 +175,7 @@ bool ScrollView::onEvent(const event::Event& event) {
     if (auto* wheelEvt = std::get_if<event::MouseWheelEvent>(&event)) {
         lastMouseScreenPos_ = wheelEvt->position;
         
+        // Cek apakah mouse ada di atas scrollbar
         auto vScrollbar = getVerticalScrollbarRect();
         auto hScrollbar = getHorizontalScrollbarRect();
         
@@ -188,29 +189,40 @@ bool ScrollView::onEvent(const event::Event& event) {
              wheelEvt->position.y >= hScrollbar.y && 
              wheelEvt->position.y < static_cast<int32_t>(hScrollbar.getBottom()));
         
+        // Prioritas 1: Handle logic scroll sendiri
         if (handleMouseWheel(*wheelEvt)) {
             return true;
         }
         
+        // Prioritas 2: Forward ke konten (jika mouse bukan di scrollbar)
         if (!onScrollbar && content_) {
             event::MouseWheelEvent transformed = *wheelEvt;
             transformed.position = translateToContentSpace(wheelEvt->position);
-            event::Event contentEvent = transformed;
-            return content_->onEvent(contentEvent);
+            
+            // [FIX] Tangkap hasil event dari anak
+            bool handled = content_->onEvent(event::Event(transformed));
+            
+            // [FIX] Jika anak berubah, paksa ScrollView gambar ulang viewport
+            if (handled) {
+                invalidate(); 
+            }
+            return handled;
         }
         return false;
     }
 
     // ------------------------------------------------------------------------
-    // MOUSE BUTTON
+    // MOUSE BUTTON (Klik)
     // ------------------------------------------------------------------------
     if (auto* btnEvt = std::get_if<event::MouseButtonEvent>(&event)) {
         lastMouseScreenPos_ = btnEvt->position;
         
+        // Prioritas 1: Handle drag scrollbar
         if (handleMouseButton(*btnEvt)) {
             return true;
         }
         
+        // Prioritas 2: Forward ke konten
         if (content_) {
             auto viewport = getViewportRect();
             bool insideViewport = 
@@ -224,15 +236,21 @@ bool ScrollView::onEvent(const event::Event& event) {
                 transformed.position = translateToContentSpace(btnEvt->position);
                 lastMouseContentPos_ = transformed.position;
                 
-                event::Event contentEvent = transformed;
-                return content_->onEvent(contentEvent);
+                // [FIX] Tangkap hasil event dari anak
+                bool handled = content_->onEvent(event::Event(transformed));
+                
+                // [FIX] Jika anak berubah (misal: tombol ditekan), paksa redraw
+                if (handled) {
+                    invalidate();
+                }
+                return handled;
             }
         }
         return false;
     }
 
     // ------------------------------------------------------------------------
-    // MOUSE MOVE (The Noisy One)
+    // MOUSE MOVE (Hover) - INI BIANG KEROKNYA KEMARIN
     // ------------------------------------------------------------------------
     if (auto* moveEvt = std::get_if<event::MouseMoveEvent>(&event)) {
         lastMouseScreenPos_ = moveEvt->position;
@@ -252,20 +270,22 @@ bool ScrollView::onEvent(const event::Event& event) {
             if (insideViewport) {
                 event::MouseMoveEvent transformed = *moveEvt;
                 transformed.position = translateToContentSpace(moveEvt->position);
-                
-                // LEVEL 4: Raw Input Spam (Hanya muncul kalau benar-benar perlu detail)
-                DBG_LOG(4, "[REAL] Mouse moved. Content Pos: ({}, {})", 
-                    transformed.position.x, transformed.position.y
-                );
-
                 lastMouseContentPos_ = transformed.position; 
                 transformed.delta = moveEvt->delta;
                 
-                return content_->onEvent(event::Event(transformed));
+                // [FIX VITAL] Tangkap apakah anak memproses hover
+                bool handled = content_->onEvent(event::Event(transformed));
+                
+                // [FIX VITAL] JIKA ANAK BERUBAH (Normal -> Hover), PAKSA REDRAW!
+                // Tanpa ini, Windows akan membuang request gambar anak karena koordinatnya jauh (clipping).
+                // Dengan ini, ScrollView (Viewport) yang minta digambar ulang.
+                if (handled) {
+                    invalidate();
+                }
+                
+                return handled;
             } else {
-                // LEVEL 1: Info (Mouse left)
-                DBG_LOG(1, "[EXIT] Mouse physically left viewport.");
-
+                // Mouse keluar viewport - kirim sinyal exit ke konten
                 event::MouseMoveEvent exitEvent = *moveEvt;
                 exitEvent.position = Point<int32_t>(-99999, -99999);
                 lastMouseContentPos_ = Point<int32_t>(-1, -1);
@@ -277,8 +297,11 @@ bool ScrollView::onEvent(const event::Event& event) {
         return false;
     }
 
+    // Event lain (Keyboard, Focus, dll)
     if (content_) {
-        return content_->onEvent(event);
+        bool handled = content_->onEvent(event);
+        if (handled) invalidate(); // [FIX] Safety net untuk event lain
+        return handled;
     }
 
     return false;
