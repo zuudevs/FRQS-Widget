@@ -1,6 +1,7 @@
+// src/widget/image.cpp - FIXED VERSION
 #include "widget/image.hpp"
 #include "render/renderer.hpp"
-#include "platform/win32_safe.hpp"
+#include "../render/renderer_d2d.hpp"  // Full header for dynamic_cast
 
 namespace frqs::widget {
 
@@ -60,10 +61,7 @@ void Image::loadBitmap(Renderer& renderer) {
     auto* extRenderer = dynamic_cast<render::IExtendedRenderer*>(&renderer);
     if (!extRenderer) return;
     
-    // Use RendererD2D's loadBitmapFromFile method
-    // We need to access it through the renderer interface
-    // For now, we'll use a platform-specific cast
-    #include "../render/renderer_d2d.hpp"
+    // Cast to RendererD2D to access loadBitmapFromFile
     auto* d2dRenderer = dynamic_cast<render::RendererD2D*>(extRenderer);
     if (!d2dRenderer) return;
     

@@ -1,3 +1,4 @@
+// include/widget/image.hpp - FIXED VERSION
 #pragma once
 
 #include "iwidget.hpp"

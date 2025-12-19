@@ -36,6 +36,18 @@ RendererD2D::RendererD2D(platform::NativeHandle hwnd)
         throw std::runtime_error("Failed to create DirectWrite factory");
     }
 
+    hr = CoCreateInstance(
+        CLSID_WICImagingFactory,
+        nullptr,
+        CLSCTX_INPROC_SERVER,
+        IID_PPV_ARGS(&wicFactory_)
+    );
+
+    if (FAILED(hr)) {
+        cleanup();
+        throw std::runtime_error("Failed to create WIC factory");
+    }
+
     // Create default text format
     hr = writeFactory_->CreateTextFormat(
         L"Segoe UI",
@@ -356,12 +368,84 @@ void RendererD2D::drawTextEx(
     textFormat->Release();
 }
 
+ID2D1Bitmap* RendererD2D::loadBitmapFromFile(const std::wstring& path) {
+    if (!renderTarget_ || !wicFactory_) return nullptr;
+
+    IWICBitmapDecoder* decoder = nullptr;
+    IWICBitmapFrameDecode* frame = nullptr;
+    IWICFormatConverter* converter = nullptr;
+    ID2D1Bitmap* bitmap = nullptr;
+
+    // Decode image file
+    HRESULT hr = wicFactory_->CreateDecoderFromFilename(
+        path.c_str(),
+        nullptr,
+        GENERIC_READ,
+        WICDecodeMetadataCacheOnDemand,
+        &decoder
+    );
+
+    if (FAILED(hr)) goto cleanup_loadBitmap;
+
+    // Get first frame
+    hr = decoder->GetFrame(0, &frame);
+    if (FAILED(hr)) goto cleanup_loadBitmap;
+
+    // Convert to 32bppPBGRA format (required by Direct2D)
+    hr = wicFactory_->CreateFormatConverter(&converter);
+    if (FAILED(hr)) goto cleanup_loadBitmap;
+
+    hr = converter->Initialize(
+        frame,
+        GUID_WICPixelFormat32bppPBGRA,
+        WICBitmapDitherTypeNone,
+        nullptr,
+        0.0,
+        WICBitmapPaletteTypeMedianCut
+    );
+    if (FAILED(hr)) goto cleanup_loadBitmap;
+
+    // Create D2D bitmap from WIC bitmap
+    hr = renderTarget_->CreateBitmapFromWicBitmap(
+        converter,
+        nullptr,
+        &bitmap
+    );
+
+cleanup_loadBitmap:
+    if (converter) converter->Release();
+    if (frame) frame->Release();
+    if (decoder) decoder->Release();
+
+    return bitmap;  // Returns nullptr on failure
+}
+
 void RendererD2D::save() {
     if (!renderTarget_) return;
     
     D2D1_MATRIX_3X2_F currentTransform;
     renderTarget_->GetTransform(&currentTransform);
     transformStack_.push(currentTransform);
+}
+
+void RendererD2D::drawBitmap(
+    void* bitmapPtr, 
+    const widget::Rect<int32_t, uint32_t>& destRect,
+    float opacity
+) {
+    if (!renderTarget_ || !bitmapPtr) return;
+
+    auto* bitmap = static_cast<ID2D1Bitmap*>(bitmapPtr);
+
+    D2D1_RECT_F dest = toD2DRect(destRect);
+
+    renderTarget_->DrawBitmap(
+        bitmap,
+        dest,
+        opacity,
+        D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+        nullptr  // Source rect (nullptr = entire bitmap)
+    );
 }
 
 void RendererD2D::restore() {
@@ -610,6 +694,11 @@ void RendererD2D::cleanup() noexcept {
     if (writeFactory_) {
         writeFactory_->Release();
         writeFactory_ = nullptr;
+    }
+
+    if (wicFactory_) {
+        wicFactory_->Release();
+        wicFactory_ = nullptr;
     }
 
     if (factory_) {

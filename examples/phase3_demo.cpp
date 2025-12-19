@@ -1,5 +1,5 @@
-// examples/phase3_demo.cpp - Phase 3 Feature Demonstration
-// Showcases: CheckBox, Image (WIC), and ScrollView with draggable scrollbars
+// examples/phase3_demo.cpp - Complete Phase 3 Feature Showcase
+// Demonstrates: Draggable ScrollView, CheckBox, and Image widgets
 
 #include "frqs-widget.hpp"
 #include "widget/container.hpp"
@@ -29,9 +29,9 @@ public:
         try {
             std::println("=== FRQS-Widget Phase 3 Demo ===");
             std::println("Features:");
+            std::println("  • Draggable scrollbars (try dragging!)");
             std::println("  • CheckBox widgets with callbacks");
-            std::println("  • Image display with WIC (multiple scale modes)");
-            std::println("  • ScrollView with draggable scrollbars");
+            std::println("  • Image display with scale modes");
             std::println("");
             
             auto& app = Application::instance();
@@ -39,7 +39,7 @@ public:
             
             // Create main window
             WindowParams params;
-            params.title = L"Phase 3 Demo - CheckBox, Image, ScrollView";
+            params.title = L"Phase 3 Demo - Interactive Widgets";
             params.size = Size(900u, 700u);
             params.position = Point(100, 100);
             
@@ -51,8 +51,12 @@ public:
             window->show();
             
             std::println("✓ Demo window created");
-            std::println("Try the interactive features!");
-            std::println("Close the window to exit.\n");
+            std::println("Try:");
+            std::println("  - Drag the scrollbar thumbs");
+            std::println("  - Click on scrollbar tracks to jump");
+            std::println("  - Toggle checkboxes");
+            std::println("  - Change image scale mode");
+            std::println("\nClose the window to exit.\n");
             
             app.run();
             
@@ -79,7 +83,7 @@ private:
         sidebar->setBackgroundColor(Color(52, 73, 94));
         
         // Sidebar title
-        auto sidebarTitle = std::make_shared<Label>(L"Settings");
+        auto sidebarTitle = std::make_shared<Label>(L"⚙ Settings");
         sidebarTitle->setLayoutWeight(0.0f);
         sidebarTitle->setRect(Rect(0, 0, 270u, 40u));
         sidebarTitle->setTextColor(colors::White);
@@ -92,9 +96,8 @@ private:
         checkboxSection->setLayoutWeight(0.0f);
         checkboxSection->setBackgroundColor(Color(44, 62, 80));
         checkboxSection->setPadding(15);
-        checkboxSection->setBorder(Color(34, 52, 70), 1.0f);
         
-        auto checkboxLabel = std::make_shared<Label>(L"Options:");
+        auto checkboxLabel = std::make_shared<Label>(L"Preferences:");
         checkboxLabel->setTextColor(Color(149, 165, 166));
         checkboxLabel->setFontSize(12.0f);
         checkboxSection->addChild(checkboxLabel);
@@ -104,8 +107,8 @@ private:
         cb1->setTextColor(colors::White);
         cb1->setChecked(true);
         cb1->setOnChanged([this](bool checked) {
-            std::println("Notifications: {}", checked ? "ON" : "OFF");
-            updateStatus(checked ? L"Notifications enabled" : L"Notifications disabled");
+            std::println("✓ Notifications: {}", checked ? "ON" : "OFF");
+            updateStatus(checked ? L"Notifications enabled ✓" : L"Notifications disabled");
         });
         cb1->setRect(Rect(0, 0, 270u, 30u));
         checkboxes_.push_back(cb1);
@@ -114,8 +117,8 @@ private:
         auto cb2 = std::make_shared<CheckBox>(L"Auto-save changes");
         cb2->setTextColor(colors::White);
         cb2->setOnChanged([this](bool checked) {
-            std::println("Auto-save: {}", checked ? "ON" : "OFF");
-            updateStatus(checked ? L"Auto-save enabled" : L"Auto-save disabled");
+            std::println("✓ Auto-save: {}", checked ? "ON" : "OFF");
+            updateStatus(checked ? L"Auto-save enabled ✓" : L"Auto-save disabled");
         });
         cb2->setRect(Rect(0, 0, 270u, 30u));
         checkboxes_.push_back(cb2);
@@ -125,8 +128,8 @@ private:
         cb3->setTextColor(colors::White);
         cb3->setChecked(true);
         cb3->setOnChanged([this](bool checked) {
-            std::println("Dark mode: {}", checked ? "ON" : "OFF");
-            updateStatus(checked ? L"Dark mode enabled" : L"Dark mode disabled");
+            std::println("✓ Dark mode: {}", checked ? "ON" : "OFF");
+            updateStatus(checked ? L"Dark mode enabled ✓" : L"Dark mode disabled");
         });
         cb3->setRect(Rect(0, 0, 270u, 30u));
         checkboxes_.push_back(cb3);
@@ -139,7 +142,6 @@ private:
         imageModeSection->setLayoutWeight(0.0f);
         imageModeSection->setBackgroundColor(Color(44, 62, 80));
         imageModeSection->setPadding(15);
-        imageModeSection->setBorder(Color(34, 52, 70), 1.0f);
         
         auto imageModeLabel = std::make_shared<Label>(L"Image Scale Mode:");
         imageModeLabel->setTextColor(Color(149, 165, 166));
@@ -147,43 +149,43 @@ private:
         imageModeSection->addChild(imageModeLabel);
         
         // Fit button
-        auto fitBtn = std::make_shared<Button>(L"Fit (Letterbox)");
+        auto fitBtn = std::make_shared<Button>(L"📐 Fit (Letterbox)");
         fitBtn->setNormalColor(Color(46, 204, 113));
         fitBtn->setHoverColor(Color(39, 174, 96));
         fitBtn->setRect(Rect(0, 0, 270u, 35u));
         fitBtn->setOnClick([this]() {
             if (image_) {
                 image_->setScaleMode(Image::ScaleMode::Fit);
-                updateStatus(L"Image mode: Fit (letterbox)");
-                std::println("Image scale mode: Fit");
+                updateStatus(L"Image mode: Fit (letterbox) 📐");
+                std::println("✓ Image scale mode: Fit");
             }
         });
         imageModeSection->addChild(fitBtn);
         
         // Fill button
-        auto fillBtn = std::make_shared<Button>(L"Fill (Crop)");
+        auto fillBtn = std::make_shared<Button>(L"🖼 Fill (Crop)");
         fillBtn->setNormalColor(Color(52, 152, 219));
         fillBtn->setHoverColor(Color(41, 128, 185));
         fillBtn->setRect(Rect(0, 0, 270u, 35u));
         fillBtn->setOnClick([this]() {
             if (image_) {
                 image_->setScaleMode(Image::ScaleMode::Fill);
-                updateStatus(L"Image mode: Fill (crop)");
-                std::println("Image scale mode: Fill");
+                updateStatus(L"Image mode: Fill (crop) 🖼");
+                std::println("✓ Image scale mode: Fill");
             }
         });
         imageModeSection->addChild(fillBtn);
         
         // Stretch button
-        auto stretchBtn = std::make_shared<Button>(L"Stretch");
+        auto stretchBtn = std::make_shared<Button>(L"↔ Stretch");
         stretchBtn->setNormalColor(Color(231, 76, 60));
         stretchBtn->setHoverColor(Color(192, 57, 43));
         stretchBtn->setRect(Rect(0, 0, 270u, 35u));
         stretchBtn->setOnClick([this]() {
             if (image_) {
                 image_->setScaleMode(Image::ScaleMode::Stretch);
-                updateStatus(L"Image mode: Stretch");
-                std::println("Image scale mode: Stretch");
+                updateStatus(L"Image mode: Stretch ↔");
+                std::println("✓ Image scale mode: Stretch");
             }
         });
         imageModeSection->addChild(stretchBtn);
@@ -193,14 +195,14 @@ private:
         root->addChild(sidebar);
         
         // ====================================================================
-        // MAIN CONTENT (Flex)
+        // MAIN CONTENT (Flex with ScrollView)
         // ====================================================================
         auto content = createFlexColumn(0, 0);
         content->setLayoutWeight(1.0f);
         content->setBackgroundColor(colors::White);
         
         // Header
-        auto header = std::make_shared<Label>(L"Phase 3 Features Demo");
+        auto header = std::make_shared<Label>(L"🚀 Phase 3 Features");
         header->setLayoutWeight(0.0f);
         header->setRect(Rect(0, 0, 600u, 60u));
         header->setBackgroundColor(Color(52, 152, 219));
@@ -211,7 +213,7 @@ private:
         header->setVerticalAlignment(Label::VerticalAlignment::Middle);
         content->addChild(header);
         
-        // ScrollView with image and info
+        // ScrollView with draggable scrollbars
         auto scrollView = std::make_shared<ScrollView>();
         scrollView->setLayoutWeight(1.0f);
         scrollView->setBackgroundColor(Color(236, 240, 241));
@@ -228,49 +230,55 @@ private:
         image_->setScaleMode(Image::ScaleMode::Fit);
         scrollContent->addChild(image_);
         
-        // Info text
-        auto infoText = std::make_shared<Label>(
-            L"Image Widget with WIC Support\n\n"
-            L"• Supports PNG, JPEG, BMP, and more formats\n"
-            L"• Three scale modes: Fit, Fill, Stretch\n"
-            L"• Hardware-accelerated rendering via Direct2D\n\n"
-            L"ScrollView Features:\n"
-            L"• Draggable scrollbar thumbs\n"
-            L"• Click on track to jump\n"
-            L"• Mouse wheel scrolling\n"
-            L"• Smooth content translation\n\n"
-            L"To test the image, replace 'test_image.png' with your own image file."
+        // Feature list
+        auto featureCard = std::make_shared<Label>(
+            L"✨ NEW in Phase 3:\n\n"
+            L"1. Draggable Scrollbars\n"
+            L"   • Grab and drag the scrollbar thumb\n"
+            L"   • Click on track to jump to position\n"
+            L"   • Smooth hover effects\n\n"
+            L"2. CheckBox Widget\n"
+            L"   • Toggle state with click\n"
+            L"   • Callback on state change\n"
+            L"   • Customizable appearance\n\n"
+            L"3. Image Widget (WIC)\n"
+            L"   • Supports PNG, JPEG, BMP, TIFF, GIF\n"
+            L"   • Three scale modes: Fit, Fill, Stretch\n"
+            L"   • Hardware-accelerated rendering\n"
+            L"   • Opacity control\n\n"
+            L"Try scrolling with mouse wheel or dragging the scrollbar!"
         );
-        infoText->setLayoutWeight(0.0f);
-        infoText->setRect(Rect(0, 0, 560u, 300u));
-        infoText->setBackgroundColor(colors::White);
-        infoText->setTextColor(Color(44, 62, 80));
-        infoText->setFontSize(14.0f);
-        infoText->setPadding(20);
-        scrollContent->addChild(infoText);
+        featureCard->setLayoutWeight(0.0f);
+        featureCard->setRect(Rect(0, 0, 560u, 400u));
+        featureCard->setBackgroundColor(colors::White);
+        featureCard->setTextColor(Color(44, 62, 80));
+        featureCard->setFontSize(14.0f);
+        featureCard->setPadding(20);
+        scrollContent->addChild(featureCard);
         
-        // Add some test content to make scrolling meaningful
-        for (int i = 0; i < 5; ++i) {
-            auto testLabel = std::make_shared<Label>(
-                std::format(L"Test Content Block #{}\n"
-                           L"This is additional content to demonstrate scrolling behavior.", i + 1)
+        // Add some test content to demonstrate scrolling
+        for (int i = 0; i < 10; ++i) {
+            auto testCard = std::make_shared<Label>(
+                std::format(L"Card #{}\n"
+                           L"This is scrollable content. "
+                           L"Try dragging the scrollbar thumb or clicking on the track!", i + 1)
             );
-            testLabel->setLayoutWeight(0.0f);
-            testLabel->setRect(Rect(0, 0, 560u, 80u));
-            testLabel->setBackgroundColor(i % 2 == 0 ? Color(250, 250, 250) : colors::White);
-            testLabel->setPadding(15);
-            scrollContent->addChild(testLabel);
+            testCard->setLayoutWeight(0.0f);
+            testCard->setRect(Rect(0, 0, 560u, 80u));
+            testCard->setBackgroundColor(i % 2 == 0 ? Color(250, 250, 250) : colors::White);
+            testCard->setPadding(15);
+            scrollContent->addChild(testCard);
         }
         
         // Calculate content height
-        uint32_t contentHeight = 400 + 300 + 80 * 5 + 20 * 7 + 40;  // Images + labels + spacing + padding
+        uint32_t contentHeight = 400 + 400 + 80 * 10 + 20 * 12 + 40;
         scrollContent->setRect(Rect(0, 0, 560u, contentHeight));
         
         scrollView->setContent(scrollContent);
         content->addChild(scrollView);
         
         // Status bar
-        statusLabel_ = std::make_shared<Label>(L"Ready. Try the checkboxes and image controls!");
+        statusLabel_ = std::make_shared<Label>(L"Ready! Try dragging scrollbars and clicking checkboxes 🎯");
         statusLabel_->setLayoutWeight(0.0f);
         statusLabel_->setRect(Rect(0, 0, 600u, 40u));
         statusLabel_->setBackgroundColor(Color(44, 62, 80));

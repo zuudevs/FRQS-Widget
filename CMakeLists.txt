@@ -364,17 +364,30 @@ if(BUILD_EXAMPLES)
             ${CMAKE_SOURCE_DIR}/include
     )
 
-	# checkbox and image Demo
-    add_executable(image_and_checkbox_demo
+	add_executable(image_and_checkbox_demo
         examples/image_and_checkbox_demo.cpp
     )
 
-    target_link_libraries(scroll_view_demo
+    target_link_libraries(image_and_checkbox_demo
         PRIVATE
             FRQS_WIDGET_LIB
     )
 
-    target_include_directories(scroll_view_demo
+    target_include_directories(image_and_checkbox_demo
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+
+	add_executable(phase3_demo
+        examples/phase3_demo.cpp
+    )
+
+    target_link_libraries(phase3_demo
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+
+    target_include_directories(phase3_demo
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )

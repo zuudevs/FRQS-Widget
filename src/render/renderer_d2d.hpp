@@ -1,3 +1,4 @@
+// src/render/renderer_d2d.hpp - COMPLETE CORRECTED VERSION
 #pragma once
 
 #include "../../include/render/renderer.hpp"
@@ -17,12 +18,12 @@ private:
     ID2D1HwndRenderTarget* renderTarget_ = nullptr;
     IDWriteFactory* writeFactory_ = nullptr;
     IDWriteTextFormat* defaultTextFormat_ = nullptr;
-	IWICImagingFactory* wicFactory_ = nullptr;
+    IWICImagingFactory* wicFactory_ = nullptr;  // NEW - for image loading
     
     // State
     platform::NativeHandle hwnd_;
     std::stack<widget::Rect<int32_t, uint32_t>> clipStack_;
-	std::stack<D2D1_MATRIX_3X2_F> transformStack_;
+    std::stack<D2D1_MATRIX_3X2_F> transformStack_;
     bool inRender_ = false;
 
 public:
@@ -100,19 +101,29 @@ public:
     void setTransform(float m11, float m12, float m21, float m22,
                      float dx, float dy) override;
 
-	void translate(float dx, float dy) override;
+    void translate(float dx, float dy) override;
 
     // ========================================================================
-    // TEXT MEASUREMENT (NEW!)
+    // TEXT MEASUREMENT
     // ========================================================================
     
     // Measure text width up to a specific position
     float measureTextWidth(const std::wstring& text, size_t length, 
-                          const FontStyle& font) const;
+                          const FontStyle& font) const override;
     
     // Get character position from X coordinate (hit testing)
     size_t getCharPositionFromX(const std::wstring& text, float x,
-                                const FontStyle& font) const;
+                                const FontStyle& font) const override;
+
+    // ========================================================================
+    // BITMAP RENDERING (NEW)
+    // ========================================================================
+    
+    void drawBitmap(void* bitmap, const widget::Rect<int32_t, uint32_t>& destRect,
+                   float opacity = 1.0f) override;
+    
+    // Load bitmap from file (helper method)
+    ID2D1Bitmap* loadBitmapFromFile(const std::wstring& path);
 
     // ========================================================================
     // RESOURCE MANAGEMENT

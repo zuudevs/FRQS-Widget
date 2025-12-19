@@ -1,3 +1,4 @@
+// src/widget/checkbox.cpp
 #include "widget/checkbox.hpp"
 
 namespace frqs::widget {

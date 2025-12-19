@@ -1,4 +1,4 @@
-// include/widget/scroll_view.hpp - FIXED VERSION
+// include/widget/scroll_view.hpp - FINAL VERSION with Draggable Scrollbars
 #pragma once
 
 #include "iwidget.hpp"
@@ -7,7 +7,7 @@
 namespace frqs::widget {
 
 // ============================================================================
-// SCROLL VIEW WIDGET (Viewport with scrollbars)
+// SCROLL VIEW WIDGET (Viewport with draggable scrollbars)
 // ============================================================================
 
 class ScrollView : public Widget {
@@ -67,15 +67,11 @@ private:
     bool horizontalScrollEnabled_ = true;
     float scrollbarWidth_ = 12.0f;
 
-    // Scrollbar state (interaction)
+    // Scrollbar state (NEW - for interaction)
     bool draggingVScroll_ = false;
     bool draggingHScroll_ = false;
     bool hoveringVScroll_ = false;
     bool hoveringHScroll_ = false;
-    
-    Point<int32_t> lastMouseScreenPos_{-1, -1};
-    Point<int32_t> lastMouseContentPos_{-1, -1};
-    
     Point<int32_t> dragStartPos_;
     float dragStartOffset_ = 0.0f;
 
@@ -100,15 +96,14 @@ private:
     // Rendering
     void renderScrollbars(Renderer& renderer);
 
-    // Event handling
+    // Event handling (NEW)
     bool handleMouseWheel(const event::MouseWheelEvent& evt);
     bool handleMouseButton(const event::MouseButtonEvent& evt);
     bool handleMouseMove(const event::MouseMoveEvent& evt);
 
     Point<int32_t> translateToContentSpace(const Point<int32_t>& screenPoint) const;
-	void recheckHover();
 
-    // Hit testing
+    // Hit testing (NEW)
     bool isPointInVerticalScrollbar(const Point<int32_t>& point) const;
     bool isPointInHorizontalScrollbar(const Point<int32_t>& point) const;
 };
