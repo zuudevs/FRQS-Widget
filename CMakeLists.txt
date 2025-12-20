@@ -93,18 +93,21 @@ set(HEADERS_PUBLIC
     include/event/event_bus.hpp
     
     # Widget
+	include/widget/button.hpp
+	include/widget/checkbox.hpp
+	include/widget/combobox.hpp
+	include/widget/container.hpp
+	include/widget/image.hpp
+	include/widget/internal.hpp
     include/widget/iwidget.hpp
-    include/widget/widget.hpp
+	include/widget/label.hpp
     include/widget/layout.hpp
-    include/widget/button.hpp
-    include/widget/container.hpp
-    include/widget/label.hpp
+	include/widget/list_adapter.hpp
+	include/widget/list_view.hpp
+	include/widget/scroll_view.hpp
     include/widget/slider.hpp
     include/widget/text_input.hpp
-    include/widget/internal.hpp
-    include/widget/scroll_view.hpp
-	include/widget/checkbox.hpp
-	include/widget/image.hpp
+	include/widget/widget.hpp
     
     # Render
     include/render/dirty_rect.hpp
@@ -136,15 +139,17 @@ set(SOURCES_IMPL
     src/event/event_dispatcher.cpp
     
     # Widget
-    src/widget/widget.cpp
-    src/widget/button.cpp
-    src/widget/container.cpp
-    src/widget/label.cpp
+	src/widget/button.cpp
+	src/widget/checkbox.cpp
+	src/widget/combobox.cpp
+	src/widget/container.cpp
+	src/widget/image.cpp
+	src/widget/label.cpp
+	src/widget/list_view.cpp
+	src/widget/scroll_view.cpp
     src/widget/slider.cpp
     src/widget/text_input.cpp
-    src/widget/scroll_view.cpp
-	src/widget/checkbox.cpp
-	src/widget/image.cpp
+	src/widget/widget.cpp
     
     # Render
     src/render/renderer_d2d.cpp
@@ -378,16 +383,16 @@ if(BUILD_EXAMPLES)
             ${CMAKE_SOURCE_DIR}/include
     )
 
-	add_executable(phase3_demo
-        examples/phase3_demo.cpp
+	add_executable(virtual_list_demo
+        examples/virtual_list_demo.cpp
     )
 
-    target_link_libraries(phase3_demo
+    target_link_libraries(virtual_list_demo
         PRIVATE
             FRQS_WIDGET_LIB
     )
 
-    target_include_directories(phase3_demo
+    target_include_directories(virtual_list_demo
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
