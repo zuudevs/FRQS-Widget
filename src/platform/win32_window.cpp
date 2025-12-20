@@ -37,18 +37,18 @@ private:
 
     void registerClass() {
         WNDCLASSEXW wcex = {};
-        wcex.cbSize = sizeof(WNDCLASSEXW);
-        wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-        wcex.lpfnWndProc = windowProc;
-        wcex.cbClsExtra = 0;
-        wcex.cbWndExtra = sizeof(void*);
-        wcex.hInstance = hInstance_;
-        wcex.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
-        wcex.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-        wcex.hbrBackground = nullptr;
-        wcex.lpszMenuName = nullptr;
-        wcex.lpszClassName = CLASS_NAME;
-        wcex.hIconSm = LoadIconW(nullptr, IDI_APPLICATION);
+		wcex.cbSize = sizeof(WNDCLASSEXW);
+		wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+		wcex.lpfnWndProc = windowProc;
+		wcex.cbClsExtra = 0;
+		wcex.cbWndExtra = sizeof(void*);
+		wcex.hInstance = hInstance_;
+		wcex.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+		wcex.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+		wcex.hbrBackground = nullptr;
+		wcex.lpszMenuName = nullptr;
+		wcex.lpszClassName = CLASS_NAME;
+		wcex.hIconSm = LoadIconW(nullptr, IDI_APPLICATION);
 
         classAtom_ = RegisterClassExW(&wcex);
         if (!classAtom_) {
@@ -332,6 +332,44 @@ private:
 				return 0;
 			}
 
+			case WM_DROPFILES: {
+            if (!pImpl->rootWidget) return 0;
+            
+            HDROP hDrop = reinterpret_cast<HDROP>(wp);
+            
+            // Get drop position
+            POINT pt;
+            DragQueryPoint(hDrop, &pt);
+            
+            // Get number of files
+            UINT fileCount = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
+            
+            if (fileCount > 0) {
+                std::vector<std::wstring> files;
+                files.reserve(fileCount);
+                
+                // Get each file path
+                for (UINT i = 0; i < fileCount; ++i) {
+                    UINT pathLen = DragQueryFileW(hDrop, i, nullptr, 0);
+                    if (pathLen > 0) {
+                        std::wstring path(pathLen, L'\0');
+                        DragQueryFileW(hDrop, i, path.data(), pathLen + 1);
+                        files.push_back(std::move(path));
+                    }
+                }
+                
+                // Create FileDrop event
+                event::FileDropEvent evt{files, widget::Point<int32_t>(pt.x, pt.y)};
+                event::Event e = std::move(evt);
+                
+                // Dispatch to widget tree
+                pImpl->rootWidget->onEvent(e);
+            }
+            
+            DragFinish(hDrop);
+            return 0;
+        }
+
             default:
                 return DefWindowProcW(hwnd, msg, wp, lp);
         }
@@ -384,7 +422,7 @@ HWND createNativeWindow(
     Win32WindowClass::ensureRegistered();
 
     DWORD style = WS_OVERLAPPEDWINDOW;
-    DWORD exStyle = WS_EX_APPWINDOW;
+    DWORD exStyle = WS_EX_APPWINDOW | WS_EX_ACCEPTFILES;  // ← ADD THIS!
 
     if (!params.decorated) {
         style = WS_POPUP | WS_THICKFRAME;
@@ -414,6 +452,9 @@ HWND createNativeWindow(
     if (!hwnd) {
         throw std::runtime_error("Failed to create native window");
     }
+
+    // ✅ Enable drag & drop
+    DragAcceptFiles(hwnd, TRUE);
 
     if (params.visible) {
         ShowWindow(hwnd, SW_SHOW);

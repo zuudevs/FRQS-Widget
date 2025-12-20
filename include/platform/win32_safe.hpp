@@ -13,6 +13,7 @@
 
 #include <windows.h>
 #include <windowsx.h>
+#include <shellapi.h>
 #include <d2d1.h>
 #include <dwrite.h>
 #include <wincodec.h>
@@ -52,6 +53,10 @@
 
 #ifdef RGB
 #undef RGB
+#endif
+
+#ifdef ShellExecute
+#undef ShellExecute
 #endif
 
 namespace frqs::platform {

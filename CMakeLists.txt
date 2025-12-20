@@ -312,16 +312,30 @@ option(BUILD_EXAMPLES "Build example executables" ON)
 
 if(BUILD_EXAMPLES)
     # Hello Window Example
-    add_executable(hello_window
-        examples/hello_window.cpp
+    add_executable(window_demo
+        examples/window_demo.cpp
     )
     
-    target_link_libraries(hello_window
+    target_link_libraries(window_demo
         PRIVATE
             FRQS_WIDGET_LIB
     )
     
-    target_include_directories(hello_window
+    target_include_directories(window_demo
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+
+	add_executable(filedrop_demo
+        examples/filedrop_demo.cpp
+    )
+    
+    target_link_libraries(filedrop_demo
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+    
+    target_include_directories(filedrop_demo
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
@@ -355,16 +369,16 @@ if(BUILD_EXAMPLES)
     )
 
     # Scroll Demo
-    add_executable(scroll_view_demo
-        examples/scroll_view_demo.cpp
+    add_executable(scrollview_demo
+        examples/scrollview_demo.cpp
     )
 
-    target_link_libraries(scroll_view_demo
+    target_link_libraries(scrollview_demo
         PRIVATE
             FRQS_WIDGET_LIB
     )
 
-    target_include_directories(scroll_view_demo
+    target_include_directories(scrollview_demo
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
@@ -383,6 +397,20 @@ if(BUILD_EXAMPLES)
             ${CMAKE_SOURCE_DIR}/include
     )
 
+	add_executable(checkbox_demo
+        examples/checkbox_demo.cpp
+    )
+
+    target_link_libraries(checkbox_demo
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+
+    target_include_directories(checkbox_demo
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+
 	add_executable(virtual_list_demo
         examples/virtual_list_demo.cpp
     )
@@ -393,6 +421,36 @@ if(BUILD_EXAMPLES)
     )
 
     target_include_directories(virtual_list_demo
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+
+	# ComboBox Demo
+    add_executable(combobox_demo
+        examples/combobox_demo.cpp
+    )
+    
+    target_link_libraries(combobox_demo
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+    
+    target_include_directories(combobox_demo
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/include
+    )
+
+	# ComboBox Demo
+    add_executable(kitchen_sink_demo
+        examples/kitchen_sink_demo.cpp
+    )
+    
+    target_link_libraries(kitchen_sink_demo
+        PRIVATE
+            FRQS_WIDGET_LIB
+    )
+    
+    target_include_directories(kitchen_sink_demo
         PRIVATE
             ${CMAKE_SOURCE_DIR}/include
     )
