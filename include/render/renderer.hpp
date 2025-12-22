@@ -53,6 +53,15 @@ struct FontStyle {
     bool italic = false;
     bool underline = false;
     bool strikethrough = false;
+    
+    bool operator==(const FontStyle& other) const noexcept {
+        return family == other.family &&
+               size == other.size &&
+               bold == other.bold &&
+               italic == other.italic &&
+               underline == other.underline &&
+               strikethrough == other.strikethrough;
+    }
 };
 
 // ============================================================================

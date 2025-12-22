@@ -4,34 +4,8 @@
 #include "unit/color.hpp"
 #include <unordered_map>
 #include <string>
-#include <memory>
+#include "render/renderer.hpp"
 #include <mutex>
-
-namespace frqs::render {
-
-// ============================================================================
-// FONT STYLE (Key for font cache)
-// ============================================================================
-
-struct FontStyle {
-    std::wstring family = L"Segoe UI";
-    float size = 14.0f;
-    bool bold = false;
-    bool italic = false;
-    bool underline = false;
-    bool strikethrough = false;
-    
-    bool operator==(const FontStyle& other) const noexcept {
-        return family == other.family &&
-               size == other.size &&
-               bold == other.bold &&
-               italic == other.italic &&
-               underline == other.underline &&
-               strikethrough == other.strikethrough;
-    }
-};
-
-} // namespace frqs::render
 
 // ============================================================================
 // HASH SPECIALIZATION for FontStyle
