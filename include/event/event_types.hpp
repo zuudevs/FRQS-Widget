@@ -1,10 +1,9 @@
-// include/event/event_types.hpp
 #pragma once
 
 #include <cstdint>
 #include <vector>
 #include <filesystem>
-#include "../unit/point.hpp"
+#include "unit/rect.hpp"
 
 namespace frqs::event {
 
@@ -130,7 +129,7 @@ enum class KeyCode : uint32_t {
     // Windows keys
     LWin       = 0x5B,
     RWin       = 0x5C,
-    Apps       = 0x5D,  // Context menu
+    Apps       = 0x5D,
     
     // Numpad
     Numpad0    = 0x60,
@@ -207,18 +206,61 @@ enum class CursorType : uint8_t {
     Wait,
     Crosshair,
     Hand,
-    SizeNS,     // North-South resize
-    SizeEW,     // East-West resize
-    SizeNESW,   // Diagonal resize
-    SizeNWSE,   // Diagonal resize
-    SizeAll,    // Move
-    No,         // Not allowed
+    SizeNS,
+    SizeEW,
+    SizeNESW,
+    SizeNWSE,
+    SizeAll,
+    No,
     Custom,
 };
 
 // ============================================================================
-// FILE DROP EVENT (FIXED - Added to event_types.hpp)
+// EVENT STRUCT DEFINITIONS (SINGLE SOURCE OF TRUTH)
 // ============================================================================
+
+struct MouseMoveEvent {
+    widget::Point<int32_t> position;
+    widget::Point<int32_t> delta;
+    uint32_t modifiers;
+    uint64_t timestamp;
+};
+
+struct MouseButtonEvent {
+    enum class Button : uint8_t { Left, Right, Middle, X1, X2 };
+    enum class Action : uint8_t { Press, Release, DoubleClick };
+    
+    Button button;
+    Action action;
+    widget::Point<int32_t> position;
+    uint32_t modifiers;
+    uint64_t timestamp;
+};
+
+struct MouseWheelEvent {
+    int32_t delta;
+    widget::Point<int32_t> position;
+    uint32_t modifiers;
+    uint64_t timestamp;
+};
+
+struct KeyEvent {
+    enum class Action : uint8_t { Press, Release, Repeat };
+    
+    uint32_t keyCode;
+    Action action;
+    uint32_t modifiers;
+    uint64_t timestamp;
+};
+
+struct ResizeEvent {
+    widget::Size<uint32_t> newSize;
+    widget::Size<uint32_t> oldSize;
+};
+
+struct PaintEvent {
+    widget::Rect<int32_t, uint32_t> dirtyRect;
+};
 
 struct FileDropEvent {
     widget::Point<int32_t> position;
@@ -228,6 +270,15 @@ struct FileDropEvent {
     
     FileDropEvent(widget::Point<int32_t> pos, std::vector<std::filesystem::path> fileList)
         : position(pos), files(std::move(fileList)) {}
+    
+    // Helper to convert from wstring paths
+    FileDropEvent(widget::Point<int32_t> pos, std::vector<std::wstring> paths)
+        : position(pos) {
+        files.reserve(paths.size());
+        for (const auto& p : paths) {
+            files.emplace_back(p);
+        }
+    }
 };
 
 } // namespace frqs::event

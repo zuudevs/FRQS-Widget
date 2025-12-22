@@ -3,9 +3,9 @@
 #include <memory>
 #include <string>
 #include <vector>
-#include "../unit/rect.hpp"
-#include "../unit/color.hpp"
-#include "../event/event.hpp"
+#include "unit/rect.hpp"
+#include "unit/color.hpp"
+#include "event/event.hpp"
 
 namespace frqs::widget {
 
@@ -55,6 +55,7 @@ public:
     virtual Rect<int32_t, uint32_t> getRect() const noexcept = 0;
     virtual void setVisible(bool visible) noexcept = 0;
     virtual bool isVisible() const noexcept = 0;
+    virtual IWidget* hitTest(const Point<int32_t>& point) = 0;
 
     // Event handling (virtual dispatch)
     virtual bool onEvent(const event::Event& event) = 0;
@@ -95,6 +96,7 @@ public:
     Rect<int32_t, uint32_t> getRect() const noexcept override;
     void setVisible(bool visible) noexcept override;
     bool isVisible() const noexcept override;
+    IWidget* hitTest(const Point<int32_t>& point) override;
     bool onEvent(const event::Event& event) override;
     void render(Renderer& renderer) override;
     void addChild(std::shared_ptr<IWidget> child) override;
@@ -103,7 +105,6 @@ public:
     IWidget* getParent() const noexcept override;
 
     // High-frequency accessors (non-virtual for performance)
-    // These use templates/concepts to avoid vtable lookup on hot path
     template <typename T = int32_t>
     constexpr Point<T> getPosition() const noexcept;
 
@@ -118,14 +119,12 @@ public:
     void invalidateRect(const Rect<int32_t, uint32_t>& rect) noexcept;
 
     // ========================================================================
-    // LAYOUT PROPERTIES (NEW!)
+    // LAYOUT PROPERTIES
     // ========================================================================
 
-    // Flex weight (0 = fixed, > 0 = proportional share of remaining space)
     void setLayoutWeight(float weight) noexcept;
     float getLayoutWeight() const noexcept;
 
-    // Size constraints
     void setMinSize(int32_t width, int32_t height) noexcept;
     void setMaxSize(int32_t width, int32_t height) noexcept;
     void setMinWidth(int32_t width) noexcept;
@@ -133,11 +132,9 @@ public:
     void setMinHeight(int32_t height) noexcept;
     void setMaxHeight(int32_t height) noexcept;
 
-    // Self-alignment
     void setAlignSelf(LayoutProps::Align align) noexcept;
     LayoutProps::Align getAlignSelf() const noexcept;
 
-    // Get full layout properties (for layout engines)
     const LayoutProps& getLayoutProps() const noexcept;
     LayoutProps& getLayoutPropsMut() noexcept;
 
