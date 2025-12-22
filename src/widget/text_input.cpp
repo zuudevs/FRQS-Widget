@@ -1,3 +1,4 @@
+// src/widget/text_input.cpp - COMPLETE WITH DIRECTWRITE MEASUREMENT
 #include "widget/text_input.hpp"
 #include "event/event_types.hpp"
 #include "render/resource_cache.hpp"
@@ -15,14 +16,14 @@ struct TextInput::Impl {
     Point<int32_t> lastMousePos;
     bool mouseDown = false;
     
-    // Cache renderer pointer for text measurement
+    // ✅ Cache renderer pointer for text measurement
     render::IExtendedRenderer* extRenderer = nullptr;
     
     Impl() : lastBlinkTime(std::chrono::steady_clock::now()) {}
 };
 
 // ============================================================================
-// TEXT INPUT IMPLEMENTATION
+// CONSTRUCTOR / DESTRUCTOR
 // ============================================================================
 
 TextInput::TextInput()
@@ -35,6 +36,10 @@ TextInput::TextInput()
 }
 
 TextInput::~TextInput() = default;
+
+// ============================================================================
+// TEXT MANAGEMENT
+// ============================================================================
 
 void TextInput::setText(const std::wstring& text) {
     if (text_ == text) return;
@@ -116,6 +121,10 @@ void TextInput::deleteSelection() {
     }
 }
 
+// ============================================================================
+// FOCUS MANAGEMENT
+// ============================================================================
+
 void TextInput::setFocus(bool focus) {
     if (focused_ == focus) return;
     
@@ -128,6 +137,10 @@ void TextInput::setFocus(bool focus) {
     updateCursorBlink();
     invalidate();
 }
+
+// ============================================================================
+// TEXT OPERATIONS
+// ============================================================================
 
 void TextInput::insertText(const std::wstring& text) {
     if (!enabled_ || text.empty()) return;
@@ -196,7 +209,7 @@ void TextInput::selectAll() {
 }
 
 void TextInput::copy() const {
-    // TODO: Implement clipboard copy
+    // TODO: Implement clipboard
 }
 
 void TextInput::cut() {
@@ -205,8 +218,12 @@ void TextInput::cut() {
 }
 
 void TextInput::paste() {
-    // TODO: Implement clipboard paste
+    // TODO: Implement clipboard
 }
+
+// ============================================================================
+// CURSOR MOVEMENT
+// ============================================================================
 
 void TextInput::moveCursor(int32_t delta, bool extendSelection) {
     if (delta == 0) return;
@@ -255,7 +272,7 @@ void TextInput::notifyTextChanged() {
         try {
             onTextChanged_(text_);
         } catch (...) {
-            // Swallow callback exceptions
+            // Swallow exceptions
         }
     }
 }
@@ -265,7 +282,7 @@ void TextInput::clampCursor() {
 }
 
 // ============================================================================
-// ✅ CRITICAL FIX: Precise Cursor Position using DirectWrite
+// ✅ PRECISE CURSOR POSITION (DirectWrite Hit-Testing)
 // ============================================================================
 
 size_t TextInput::getCursorPosFromPoint(const Point<int32_t>& point) const {
@@ -284,10 +301,14 @@ size_t TextInput::getCursorPosFromPoint(const Point<int32_t>& point) const {
         return std::min(pos, text_.length());
     }
     
-    // ❌ Fallback (inaccurate - should never be used)
+    // ❌ Fallback (should never execute)
     size_t pos = static_cast<size_t>(relX / 8);
     return std::min(pos, text_.length());
 }
+
+// ============================================================================
+// EVENT HANDLING
+// ============================================================================
 
 bool TextInput::handleMouseEvent(const event::MouseButtonEvent& evt) {
     auto rect = getRect();
@@ -344,7 +365,7 @@ bool TextInput::handleMouseMove(const event::MouseMoveEvent& evt) {
 }
 
 // ============================================================================
-// ✅ CRITICAL FIX: WM_CHAR Handling for Text Input
+// ✅ KEYBOARD EVENT HANDLER (WM_CHAR + Navigation)
 // ============================================================================
 
 bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
@@ -358,7 +379,7 @@ bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
     bool shift = (evt.modifiers & static_cast<uint32_t>(event::ModifierKey::Shift)) != 0;
     bool isCharEvent = (evt.modifiers & 0x80000000) != 0;
     
-    // ✅ Handle WM_CHAR messages (actual character input)
+    // ✅ CRITICAL: Handle WM_CHAR messages (actual character input)
     if (isCharEvent) {
         wchar_t ch = static_cast<wchar_t>(evt.keyCode & 0x7FFFFFFF);
         
@@ -378,12 +399,12 @@ bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
             return true;
         }
         
-        // Tab (don't handle - let focus system handle it)
+        // Tab - don't handle (let focus system handle)
         if (ch == L'\t') {
             return false;
         }
         
-        // Printable characters (excluding control characters)
+        // ✅ Printable characters (excluding control chars)
         if (ch >= 32 && ch != 0x7F) {
             insertText(std::wstring(1, ch));
             return true;
@@ -488,14 +509,14 @@ bool TextInput::onEvent(const event::Event& event) {
 }
 
 // ============================================================================
-// ✅ RENDERING with Precise Cursor (DirectWrite Metrics)
+// ✅ RENDERING (Pixel-Perfect Cursor with DirectWrite)
 // ============================================================================
 
 void TextInput::render(Renderer& renderer) {
     if (!isVisible()) return;
 
     try {
-        // Cache extended renderer for measurement
+        // ✅ Cache extended renderer for measurement
         if (!pImpl_->extRenderer) {
             pImpl_->extRenderer = dynamic_cast<render::IExtendedRenderer*>(&renderer);
         }
@@ -579,7 +600,7 @@ void TextInput::render(Renderer& renderer) {
             }
         }
         
-        // ✅ RENDER CURSOR using DirectWrite measurement
+        // ✅ RENDER CURSOR (Pixel-Perfect with DirectWrite)
         if (focused_ && cursorVisible_) {
             float cursorXOffset = 0.0f;
             
