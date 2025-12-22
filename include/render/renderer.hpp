@@ -3,7 +3,7 @@
 // Note: The Renderer interface is already defined in widget/iwidget.hpp
 // This header provides additional rendering utilities
 
-#include "../widget/iwidget.hpp"
+#include "widget/iwidget.hpp"
 
 namespace frqs::render {
 

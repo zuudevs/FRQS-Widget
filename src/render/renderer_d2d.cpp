@@ -1,4 +1,5 @@
 #include "renderer_d2d.hpp"
+#include "render/resource_cache.hpp"
 #include <stdexcept>
 
 namespace frqs::render {
@@ -14,7 +15,6 @@ RendererD2D::RendererD2D(platform::NativeHandle hwnd)
         throw std::runtime_error("Invalid window handle for renderer");
     }
 
-    // Create D2D factory
     HRESULT hr = D2D1CreateFactory(
         D2D1_FACTORY_TYPE_SINGLE_THREADED,
         &factory_
@@ -22,18 +22,6 @@ RendererD2D::RendererD2D(platform::NativeHandle hwnd)
 
     if (FAILED(hr)) {
         throw std::runtime_error("Failed to create Direct2D factory");
-    }
-
-    // Create DirectWrite factory
-    hr = DWriteCreateFactory(
-        DWRITE_FACTORY_TYPE_SHARED,
-        __uuidof(IDWriteFactory),
-        reinterpret_cast<IUnknown**>(&writeFactory_)
-    );
-
-    if (FAILED(hr)) {
-        cleanup();
-        throw std::runtime_error("Failed to create DirectWrite factory");
     }
 
     hr = CoCreateInstance(
@@ -48,28 +36,12 @@ RendererD2D::RendererD2D(platform::NativeHandle hwnd)
         throw std::runtime_error("Failed to create WIC factory");
     }
 
-    // Create default text format
-    hr = writeFactory_->CreateTextFormat(
-        L"Segoe UI",
-        nullptr,
-        DWRITE_FONT_WEIGHT_NORMAL,
-        DWRITE_FONT_STYLE_NORMAL,
-        DWRITE_FONT_STRETCH_NORMAL,
-        14.0f,
-        L"en-us",
-        &defaultTextFormat_
-    );
-
-    if (FAILED(hr)) {
-        cleanup();
-        throw std::runtime_error("Failed to create default text format");
-    }
-
-    // Create render target
     if (!recreateDeviceResources()) {
         cleanup();
         throw std::runtime_error("Failed to create render target");
     }
+    
+    ResourceCache::instance().setRenderTarget(renderTarget_);
 }
 
 RendererD2D::~RendererD2D() noexcept {
@@ -100,12 +72,11 @@ void RendererD2D::endRender() {
 }
 
 // ============================================================================
-// BASIC RENDERER INTERFACE
+// BASIC RENDERER INTERFACE (OPTIMIZED)
 // ============================================================================
 
 void RendererD2D::clear(const widget::Color& color) {
     if (!renderTarget_) return;
-
     renderTarget_->Clear(toD2DColor(color));
 }
 
@@ -116,16 +87,10 @@ void RendererD2D::drawRect(
 ) {
     if (!renderTarget_) return;
 
-    ID2D1SolidColorBrush* brush = createSolidBrush(color);
+    ID2D1SolidColorBrush* brush = ResourceCache::instance().getBrush(color, renderTarget_);
     if (!brush) return;
 
-    renderTarget_->DrawRectangle(
-        toD2DRect(rect),
-        brush,
-        strokeWidth
-    );
-
-    brush->Release();
+    renderTarget_->DrawRectangle(toD2DRect(rect), brush, strokeWidth);
 }
 
 void RendererD2D::fillRect(
@@ -134,15 +99,10 @@ void RendererD2D::fillRect(
 ) {
     if (!renderTarget_) return;
 
-    ID2D1SolidColorBrush* brush = createSolidBrush(color);
+    ID2D1SolidColorBrush* brush = ResourceCache::instance().getBrush(color, renderTarget_);
     if (!brush) return;
 
-    renderTarget_->FillRectangle(
-        toD2DRect(rect),
-        brush
-    );
-
-    brush->Release();
+    renderTarget_->FillRectangle(toD2DRect(rect), brush);
 }
 
 void RendererD2D::drawText(
@@ -150,20 +110,25 @@ void RendererD2D::drawText(
     const widget::Rect<int32_t, uint32_t>& rect,
     const widget::Color& color
 ) {
-    if (!renderTarget_ || !defaultTextFormat_) return;
+    if (!renderTarget_) return;
 
-    ID2D1SolidColorBrush* brush = createSolidBrush(color);
+    FontStyle defaultFont;
+    defaultFont.family = L"Segoe UI";
+    defaultFont.size = 14.0f;
+    
+    IDWriteTextFormat* textFormat = ResourceCache::instance().getFont(defaultFont);
+    if (!textFormat) return;
+    
+    ID2D1SolidColorBrush* brush = ResourceCache::instance().getBrush(color, renderTarget_);
     if (!brush) return;
 
     renderTarget_->DrawTextW(
         text.c_str(),
         static_cast<UINT32>(text.length()),
-        defaultTextFormat_,
+        textFormat,
         toD2DRect(rect),
         brush
     );
-
-    brush->Release();
 }
 
 void RendererD2D::pushClip(const widget::Rect<int32_t, uint32_t>& rect) {
@@ -184,7 +149,7 @@ void RendererD2D::popClip() {
 }
 
 // ============================================================================
-// EXTENDED RENDERER INTERFACE
+// EXTENDED RENDERER INTERFACE (OPTIMIZED)
 // ============================================================================
 
 void RendererD2D::drawLine(
@@ -195,23 +160,15 @@ void RendererD2D::drawLine(
 ) {
     if (!renderTarget_) return;
 
-    ID2D1SolidColorBrush* brush = createSolidBrush(color);
+    ID2D1SolidColorBrush* brush = ResourceCache::instance().getBrush(color, renderTarget_);
     if (!brush) return;
 
     renderTarget_->DrawLine(
-        D2D1::Point2F(
-            static_cast<float>(start.x),
-            static_cast<float>(start.y)
-        ),
-        D2D1::Point2F(
-            static_cast<float>(end.x),
-            static_cast<float>(end.y)
-        ),
+        D2D1::Point2F(static_cast<float>(start.x), static_cast<float>(start.y)),
+        D2D1::Point2F(static_cast<float>(end.x), static_cast<float>(end.y)),
         brush,
         strokeWidth
     );
-
-    brush->Release();
 }
 
 void RendererD2D::drawEllipse(
@@ -221,7 +178,7 @@ void RendererD2D::drawEllipse(
 ) {
     if (!renderTarget_) return;
 
-    ID2D1SolidColorBrush* brush = createSolidBrush(color);
+    ID2D1SolidColorBrush* brush = ResourceCache::instance().getBrush(color, renderTarget_);
     if (!brush) return;
 
     D2D1_ELLIPSE ellipse;
@@ -233,7 +190,6 @@ void RendererD2D::drawEllipse(
     ellipse.radiusY = rect.h / 2.0f;
 
     renderTarget_->DrawEllipse(ellipse, brush, strokeWidth);
-    brush->Release();
 }
 
 void RendererD2D::fillEllipse(
@@ -242,7 +198,7 @@ void RendererD2D::fillEllipse(
 ) {
     if (!renderTarget_) return;
 
-    ID2D1SolidColorBrush* brush = createSolidBrush(color);
+    ID2D1SolidColorBrush* brush = ResourceCache::instance().getBrush(color, renderTarget_);
     if (!brush) return;
 
     D2D1_ELLIPSE ellipse;
@@ -254,7 +210,6 @@ void RendererD2D::fillEllipse(
     ellipse.radiusY = rect.h / 2.0f;
 
     renderTarget_->FillEllipse(ellipse, brush);
-    brush->Release();
 }
 
 void RendererD2D::drawRoundedRect(
@@ -266,7 +221,7 @@ void RendererD2D::drawRoundedRect(
 ) {
     if (!renderTarget_) return;
 
-    ID2D1SolidColorBrush* brush = createSolidBrush(color);
+    ID2D1SolidColorBrush* brush = ResourceCache::instance().getBrush(color, renderTarget_);
     if (!brush) return;
 
     D2D1_ROUNDED_RECT roundedRect;
@@ -275,7 +230,6 @@ void RendererD2D::drawRoundedRect(
     roundedRect.radiusY = radiusY;
 
     renderTarget_->DrawRoundedRectangle(roundedRect, brush, strokeWidth);
-    brush->Release();
 }
 
 void RendererD2D::fillRoundedRect(
@@ -286,7 +240,7 @@ void RendererD2D::fillRoundedRect(
 ) {
     if (!renderTarget_) return;
 
-    ID2D1SolidColorBrush* brush = createSolidBrush(color);
+    ID2D1SolidColorBrush* brush = ResourceCache::instance().getBrush(color, renderTarget_);
     if (!brush) return;
 
     D2D1_ROUNDED_RECT roundedRect;
@@ -295,7 +249,6 @@ void RendererD2D::fillRoundedRect(
     roundedRect.radiusY = radiusY;
 
     renderTarget_->FillRoundedRectangle(roundedRect, brush);
-    brush->Release();
 }
 
 void RendererD2D::drawTextEx(
@@ -306,24 +259,11 @@ void RendererD2D::drawTextEx(
     TextAlign halign,
     VerticalAlign valign
 ) {
-    if (!renderTarget_ || !writeFactory_) return;
+    if (!renderTarget_) return;
+    
+    IDWriteTextFormat* textFormat = ResourceCache::instance().getFont(font);
+    if (!textFormat) return;
 
-    // Create text format with specified font
-    IDWriteTextFormat* textFormat = nullptr;
-    HRESULT hr = writeFactory_->CreateTextFormat(
-        font.family.c_str(),
-        nullptr,
-        font.bold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL,
-        font.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
-        DWRITE_FONT_STRETCH_NORMAL,
-        font.size,
-        L"en-us",
-        &textFormat
-    );
-
-    if (FAILED(hr)) return;
-
-    // Set text alignment
     switch (halign) {
         case TextAlign::Left:
             textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
@@ -339,7 +279,6 @@ void RendererD2D::drawTextEx(
             break;
     }
 
-    // Set vertical alignment
     switch (valign) {
         case VerticalAlign::Top:
             textFormat->SetParagraphAlignment(DWRITE_PARAGRAPH_ALIGNMENT_NEAR);
@@ -352,20 +291,16 @@ void RendererD2D::drawTextEx(
             break;
     }
 
-    // Draw text
-    ID2D1SolidColorBrush* brush = createSolidBrush(color);
-    if (brush) {
-        renderTarget_->DrawTextW(
-            text.c_str(),
-            static_cast<UINT32>(text.length()),
-            textFormat,
-            toD2DRect(rect),
-            brush
-        );
-        brush->Release();
-    }
+    ID2D1SolidColorBrush* brush = ResourceCache::instance().getBrush(color, renderTarget_);
+    if (!brush) return;
 
-    textFormat->Release();
+    renderTarget_->DrawTextW(
+        text.c_str(),
+        static_cast<UINT32>(text.length()),
+        textFormat,
+        toD2DRect(rect),
+        brush
+    );
 }
 
 ID2D1Bitmap* RendererD2D::loadBitmapFromFile(const std::wstring& path) {
@@ -376,7 +311,6 @@ ID2D1Bitmap* RendererD2D::loadBitmapFromFile(const std::wstring& path) {
     IWICFormatConverter* converter = nullptr;
     ID2D1Bitmap* bitmap = nullptr;
 
-    // Decode image file
     HRESULT hr = wicFactory_->CreateDecoderFromFilename(
         path.c_str(),
         nullptr,
@@ -387,11 +321,9 @@ ID2D1Bitmap* RendererD2D::loadBitmapFromFile(const std::wstring& path) {
 
     if (FAILED(hr)) goto cleanup_loadBitmap;
 
-    // Get first frame
     hr = decoder->GetFrame(0, &frame);
     if (FAILED(hr)) goto cleanup_loadBitmap;
 
-    // Convert to 32bppPBGRA format (required by Direct2D)
     hr = wicFactory_->CreateFormatConverter(&converter);
     if (FAILED(hr)) goto cleanup_loadBitmap;
 
@@ -405,19 +337,14 @@ ID2D1Bitmap* RendererD2D::loadBitmapFromFile(const std::wstring& path) {
     );
     if (FAILED(hr)) goto cleanup_loadBitmap;
 
-    // Create D2D bitmap from WIC bitmap
-    hr = renderTarget_->CreateBitmapFromWicBitmap(
-        converter,
-        nullptr,
-        &bitmap
-    );
+    hr = renderTarget_->CreateBitmapFromWicBitmap(converter, nullptr, &bitmap);
 
 cleanup_loadBitmap:
     if (converter) converter->Release();
     if (frame) frame->Release();
     if (decoder) decoder->Release();
 
-    return bitmap;  // Returns nullptr on failure
+    return bitmap;
 }
 
 void RendererD2D::save() {
@@ -436,7 +363,6 @@ void RendererD2D::drawBitmap(
     if (!renderTarget_ || !bitmapPtr) return;
 
     auto* bitmap = static_cast<ID2D1Bitmap*>(bitmapPtr);
-
     D2D1_RECT_F dest = toD2DRect(destRect);
 
     renderTarget_->DrawBitmap(
@@ -444,7 +370,7 @@ void RendererD2D::drawBitmap(
         dest,
         opacity,
         D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
-        nullptr  // Source rect (nullptr = entire bitmap)
+        nullptr
     );
 }
 
@@ -457,7 +383,6 @@ void RendererD2D::restore() {
 }
 
 void RendererD2D::setOpacity(float opacity) {
-    // TODO: Implement opacity layer
     (void)opacity;
 }
 
@@ -488,51 +413,46 @@ void RendererD2D::translate(float dx, float dy) {
     renderTarget_->SetTransform(combined);
 }
 
-// ============================================================================
-// TEXT MEASUREMENT IMPLEMENTATION (NEW!)
-// ============================================================================
-
 float RendererD2D::measureTextWidth(
     const std::wstring& text, 
     size_t length,
     const FontStyle& font
 ) const {
-    if (!writeFactory_ || text.empty() || length == 0) return 0.0f;
-    
-    // Clamp length
-    length = std::min(length, text.length());
-    
-    // Create text format for measurement
-    IDWriteTextFormat* textFormat = nullptr;
-    HRESULT hr = writeFactory_->CreateTextFormat(
-        font.family.c_str(),
-        nullptr,
-        font.bold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL,
-        font.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
-        DWRITE_FONT_STRETCH_NORMAL,
-        font.size,
-        L"en-us",
-        &textFormat
+    IDWriteFactory* writeFactory = nullptr;
+    HRESULT hr = DWriteCreateFactory(
+        DWRITE_FACTORY_TYPE_SHARED,
+        __uuidof(IDWriteFactory),
+        reinterpret_cast<IUnknown**>(&writeFactory)
     );
     
-    if (FAILED(hr)) return 0.0f;
+    if (FAILED(hr) || !writeFactory || text.empty() || length == 0) {
+        if (writeFactory) writeFactory->Release();
+        return 0.0f;
+    }
     
-    // Create text layout for precise measurement
+    length = std::min(length, text.length());
+    
+    IDWriteTextFormat* textFormat = ResourceCache::instance().getFont(font);
+    if (!textFormat) {
+        writeFactory->Release();
+        return 0.0f;
+    }
+    
     IDWriteTextLayout* textLayout = nullptr;
-    hr = writeFactory_->CreateTextLayout(
+    hr = writeFactory->CreateTextLayout(
         text.c_str(),
-        static_cast<UINT32>(length),  // Only measure up to position
+        static_cast<UINT32>(length),
         textFormat,
-        10000.0f,  // Max width (large enough)
-        100.0f,    // Max height
+        10000.0f,
+        100.0f,
         &textLayout
     );
     
-    textFormat->Release();
+    if (FAILED(hr)) {
+        writeFactory->Release();
+        return 0.0f;
+    }
     
-    if (FAILED(hr)) return 0.0f;
-    
-    // Get text metrics
     DWRITE_TEXT_METRICS metrics;
     hr = textLayout->GetMetrics(&metrics);
     
@@ -542,6 +462,7 @@ float RendererD2D::measureTextWidth(
     }
     
     textLayout->Release();
+    writeFactory->Release();
     
     return width;
 }
@@ -551,26 +472,26 @@ size_t RendererD2D::getCharPositionFromX(
     float x,
     const FontStyle& font
 ) const {
-    if (!writeFactory_ || text.empty() || x <= 0.0f) return 0;
-    
-    // Create text format
-    IDWriteTextFormat* textFormat = nullptr;
-    HRESULT hr = writeFactory_->CreateTextFormat(
-        font.family.c_str(),
-        nullptr,
-        font.bold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL,
-        font.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
-        DWRITE_FONT_STRETCH_NORMAL,
-        font.size,
-        L"en-us",
-        &textFormat
+    IDWriteFactory* writeFactory = nullptr;
+    HRESULT hr = DWriteCreateFactory(
+        DWRITE_FACTORY_TYPE_SHARED,
+        __uuidof(IDWriteFactory),
+        reinterpret_cast<IUnknown**>(&writeFactory)
     );
     
-    if (FAILED(hr)) return 0;
+    if (FAILED(hr) || !writeFactory || text.empty() || x <= 0.0f) {
+        if (writeFactory) writeFactory->Release();
+        return 0;
+    }
     
-    // Create text layout
+    IDWriteTextFormat* textFormat = ResourceCache::instance().getFont(font);
+    if (!textFormat) {
+        writeFactory->Release();
+        return 0;
+    }
+    
     IDWriteTextLayout* textLayout = nullptr;
-    hr = writeFactory_->CreateTextLayout(
+    hr = writeFactory->CreateTextLayout(
         text.c_str(),
         static_cast<UINT32>(text.length()),
         textFormat,
@@ -579,11 +500,11 @@ size_t RendererD2D::getCharPositionFromX(
         &textLayout
     );
     
-    textFormat->Release();
+    if (FAILED(hr)) {
+        writeFactory->Release();
+        return 0;
+    }
     
-    if (FAILED(hr)) return 0;
-    
-    // Hit test to find character position
     BOOL isTrailingHit = FALSE;
     BOOL isInside = FALSE;
     DWRITE_HIT_TEST_METRICS hitMetrics;
@@ -601,13 +522,13 @@ size_t RendererD2D::getCharPositionFromX(
     if (SUCCEEDED(hr)) {
         position = static_cast<size_t>(hitMetrics.textPosition);
         
-        // If hit trailing edge of character, move to next position
         if (isTrailingHit && position < text.length()) {
             position++;
         }
     }
     
     textLayout->Release();
+    writeFactory->Release();
     
     return std::min(position, text.length());
 }
@@ -618,7 +539,6 @@ size_t RendererD2D::getCharPositionFromX(
 
 void RendererD2D::resize(uint32_t width, uint32_t height) {
     if (!renderTarget_) return;
-
     renderTarget_->Resize(D2D1::SizeU(width, height));
 }
 
@@ -630,10 +550,7 @@ bool RendererD2D::recreateDeviceResources() {
     RECT rc;
     GetClientRect(hwnd_, &rc);
 
-    D2D1_SIZE_U size = D2D1::SizeU(
-        rc.right - rc.left,
-        rc.bottom - rc.top
-    );
+    D2D1_SIZE_U size = D2D1::SizeU(rc.right - rc.left, rc.bottom - rc.top);
 
     HRESULT hr = factory_->CreateHwndRenderTarget(
         D2D1::RenderTargetProperties(),
@@ -641,24 +558,16 @@ bool RendererD2D::recreateDeviceResources() {
         &renderTarget_
     );
 
+    if (SUCCEEDED(hr)) {
+        ResourceCache::instance().setRenderTarget(renderTarget_);
+    }
+
     return SUCCEEDED(hr);
 }
 
 // ============================================================================
 // HELPER METHODS
 // ============================================================================
-
-ID2D1SolidColorBrush* RendererD2D::createSolidBrush(const widget::Color& color) {
-    if (!renderTarget_) return nullptr;
-
-    ID2D1SolidColorBrush* brush = nullptr;
-    renderTarget_->CreateSolidColorBrush(
-        toD2DColor(color),
-        &brush
-    );
-
-    return brush;
-}
 
 D2D1_COLOR_F RendererD2D::toD2DColor(const widget::Color& color) const noexcept {
     return D2D1::ColorF(
@@ -686,16 +595,6 @@ void RendererD2D::cleanup() noexcept {
     while (!clipStack_.empty()) clipStack_.pop();
     while (!transformStack_.empty()) transformStack_.pop();
 
-    if (defaultTextFormat_) {
-        defaultTextFormat_->Release();
-        defaultTextFormat_ = nullptr;
-    }
-
-    if (writeFactory_) {
-        writeFactory_->Release();
-        writeFactory_ = nullptr;
-    }
-
     if (wicFactory_) {
         wicFactory_->Release();
         wicFactory_ = nullptr;
@@ -709,6 +608,7 @@ void RendererD2D::cleanup() noexcept {
 
 void RendererD2D::cleanupDeviceResources() noexcept {
     if (renderTarget_) {
+        ResourceCache::instance().clearBrushCache();
         renderTarget_->Release();
         renderTarget_ = nullptr;
     }

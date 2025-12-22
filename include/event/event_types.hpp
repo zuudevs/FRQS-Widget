@@ -1,6 +1,9 @@
 #pragma once
 
 #include <cstdint>
+#include <vector>
+#include <filesystem>
+#include "../unit/point.hpp"
 
 namespace frqs::event {
 
@@ -210,6 +213,20 @@ enum class CursorType : uint8_t {
     SizeAll,    // Move
     No,         // Not allowed
     Custom,
+};
+
+// ============================================================================
+// FILE DROP EVENT (NEW)
+// ============================================================================
+
+struct FileDropEvent {
+    widget::Point<int32_t> position;
+    std::vector<std::filesystem::path> files;
+    
+    FileDropEvent() = default;
+    
+    FileDropEvent(widget::Point<int32_t> pos, std::vector<std::filesystem::path> fileList)
+        : position(pos), files(std::move(fileList)) {}
 };
 
 } // namespace frqs::event
