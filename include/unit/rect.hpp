@@ -137,8 +137,19 @@ public :
     constexpr const base_size_t& getSize() const noexcept { return static_cast<const base_size_t&>(*this); }
     constexpr base_point_t& getPoint() noexcept { return static_cast<base_point_t&>(*this); }
     constexpr base_size_t& getSize() noexcept { return static_cast<base_size_t&>(*this); }
+
+	template <typename Tpo>
+	requires (meta::is_point_v<Tpo>)
+	constexpr auto contain(const Tpo& pt) const noexcept {
+		return pt.x >= getPoint().x
+			 && pt.x < getPoint().x + getSize().w 
+			 && pt.y >= getPoint().y 
+			 && pt.y < getPoint().y + getSize().h;
+	}
     
-    constexpr auto intersect(const Rect& o) const noexcept {
+	template <typename To>
+	requires (meta::is_rect_v<To>)
+    constexpr auto intersect(const To& o) const noexcept {
         auto l = std::max(getLeft(), o.getLeft()) ;
         auto t = std::max(getTop(), o.getTop()) ;
         auto r = std::min(getRight(), o.getRight()) ;
@@ -147,6 +158,14 @@ public :
         Ts h = (b > static_cast<uint32_t>(t)) ? static_cast<Ts>(b - t) : Ts{0} ;
 
         return Rect(l, t, w, h) ;
+    }
+
+	constexpr auto merge(const Rect& other) const noexcept {
+        float x1 = std::min(getPoint().x, other.x);
+        float y1 = std::min(getPoint().y, other.y);
+        float x2 = std::max(getPoint().x + getSize().w, other.x + other.w);
+        float y2 = std::max(getPoint().y + getSize().h, other.y + other.h);
+        return Rect(x1, y1, x2 - x1, y2 - y1);
     }
 
 	constexpr auto relativeTo(const Rect& o) const noexcept {

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <vector>
-#include "../unit/rect.hpp"
+#include "unit/rect.hpp"
 
 namespace frqs::render {
 
