@@ -1,4 +1,4 @@
-// src/widget/widget.cpp - COMPLETE FILE dengan EVENT HANDLING FIX
+// src/widget/widget.cpp - HIT-TEST ARCHITECTURE IMPLEMENTATION
 #include "widget/iwidget.hpp"
 #include "core/window.hpp"
 #include "platform/win32_safe.hpp"
@@ -70,6 +70,104 @@ void Widget::setVisible(bool visible) noexcept {
 
 bool Widget::isVisible() const noexcept {
     return pImpl_->visible;
+}
+
+// ============================================================================
+// HIT-TEST IMPLEMENTATION (THE ENGINE)
+// ============================================================================
+
+IWidget* Widget::hitTest(const Point<int32_t>& point) {
+    // 1. Check visibility
+    if (!isVisible()) return nullptr;
+    
+    // 2. Check if point is inside this widget's bounds
+    auto rect = getRect();
+    if (point.x < rect.x || point.x >= static_cast<int32_t>(rect.getRight()) ||
+        point.y < rect.y || point.y >= static_cast<int32_t>(rect.getBottom())) {
+        return nullptr;
+    }
+    
+    // 3. Test children in REVERSE order (top-most first in Z-order)
+    for (auto it = pImpl_->children.rbegin(); it != pImpl_->children.rend(); ++it) {
+        auto* result = (*it)->hitTest(point);
+        if (result) {
+            return result;  // Child (or descendant) was hit
+        }
+    }
+    
+    // 4. No child was hit, so this widget is the target
+    return this;
+}
+
+// ============================================================================
+// EVENT HANDLING - SIMPLIFIED (Dispatch logic moved to Window)
+// ============================================================================
+
+bool Widget::onEvent(const event::Event& event) {
+    // Default implementation: no handling
+    // Derived classes override this to handle specific events
+    return false;
+}
+
+// ============================================================================
+// RENDERING
+// ============================================================================
+
+void Widget::render(Renderer& renderer) {
+    if (!pImpl_->visible) return;
+
+    // Render background
+    renderer.fillRect(pImpl_->rect, pImpl_->backgroundColor);
+
+    // Render children
+    for (auto& child : pImpl_->children) {
+        if (child->isVisible()) {
+            child->render(renderer);
+        }
+    }
+}
+
+// ============================================================================
+// HIERARCHY
+// ============================================================================
+
+void Widget::addChild(std::shared_ptr<IWidget> child) {
+    if (!child) return;
+
+    if (auto* childWidget = dynamic_cast<Widget*>(child.get())) {
+        if (childWidget->pImpl_->parent) {
+            childWidget->pImpl_->parent->removeChild(child.get());
+        }
+        childWidget->pImpl_->parent = this;
+        childWidget->pImpl_->windowHandle = pImpl_->getWindowHandle();
+    }
+
+    pImpl_->children.push_back(std::move(child));
+    invalidate();
+}
+
+void Widget::removeChild(IWidget* child) {
+    if (!child) return;
+
+    auto it = std::find_if(pImpl_->children.begin(), pImpl_->children.end(),
+        [child](const auto& ptr) { return ptr.get() == child; });
+
+    if (it != pImpl_->children.end()) {
+        if (auto* childWidget = dynamic_cast<Widget*>(child)) {
+            childWidget->pImpl_->parent = nullptr;
+            childWidget->pImpl_->windowHandle = nullptr;
+        }
+        pImpl_->children.erase(it);
+        invalidate();
+    }
+}
+
+const std::vector<std::shared_ptr<IWidget>>& Widget::getChildren() const noexcept {
+    return pImpl_->children;
+}
+
+IWidget* Widget::getParent() const noexcept {
+    return pImpl_->parent;
 }
 
 // ============================================================================
@@ -167,98 +265,6 @@ const LayoutProps& Widget::getLayoutProps() const noexcept {
 
 LayoutProps& Widget::getLayoutPropsMut() noexcept {
     return pImpl_->layoutProps;
-}
-
-// ============================================================================
-// EVENT HANDLING - FIXED VERSION
-// ============================================================================
-
-bool Widget::onEvent(const event::Event& event) {
-    // ✅ CRITICAL FIX: For mouse move events, dispatch to ALL children
-    // This ensures hover states are updated correctly
-    if (std::holds_alternative<event::MouseMoveEvent>(event)) {
-        bool handled = false;
-        
-        // Send to ALL children (don't stop at first handler)
-        for (auto& child : pImpl_->children) {
-            if (child->onEvent(event)) {
-                handled = true;
-                // ✅ Continue to other children!
-            }
-        }
-        
-        return handled;
-    }
-    
-    // ✅ For other events (click, key, wheel, etc), stop at first handler
-    for (auto& child : pImpl_->children) {
-        if (child->onEvent(event)) {
-            return true;  // Event handled, stop propagation
-        }
-    }
-    
-    return false;  // Event not handled
-}
-
-// ============================================================================
-// RENDERING
-// ============================================================================
-
-void Widget::render(Renderer& renderer) {
-    if (!pImpl_->visible) return;
-
-    // Render background
-    renderer.fillRect(pImpl_->rect, pImpl_->backgroundColor);
-
-    // Render children
-    for (auto& child : pImpl_->children) {
-        if (child->isVisible()) {
-            child->render(renderer);
-        }
-    }
-}
-
-// ============================================================================
-// HIERARCHY
-// ============================================================================
-
-void Widget::addChild(std::shared_ptr<IWidget> child) {
-    if (!child) return;
-
-    if (auto* childWidget = dynamic_cast<Widget*>(child.get())) {
-        if (childWidget->pImpl_->parent) {
-            childWidget->pImpl_->parent->removeChild(child.get());
-        }
-        childWidget->pImpl_->parent = this;
-        childWidget->pImpl_->windowHandle = pImpl_->getWindowHandle();
-    }
-
-    pImpl_->children.push_back(std::move(child));
-    invalidate();
-}
-
-void Widget::removeChild(IWidget* child) {
-    if (!child) return;
-
-    auto it = std::find_if(pImpl_->children.begin(), pImpl_->children.end(),
-        [child](const auto& ptr) { return ptr.get() == child; });
-
-    if (it != pImpl_->children.end()) {
-        if (auto* childWidget = dynamic_cast<Widget*>(child)) {
-            childWidget->pImpl_->parent = nullptr;
-            childWidget->pImpl_->windowHandle = nullptr;
-        }
-        pImpl_->children.erase(it);
-        invalidate();
-    }
-}
-
-const std::vector<std::shared_ptr<IWidget>>& Widget::getChildren() const noexcept {
-    return pImpl_->children;
-}
-
-IWidget* Widget::getParent() const noexcept {
-    return pImpl_->parent;
 }
 
 // ============================================================================

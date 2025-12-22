@@ -1,5 +1,6 @@
 #include "widget/text_input.hpp"
 #include "event/event_types.hpp"
+#include "render/resource_cache.hpp"
 #include <algorithm>
 #include <chrono>
 
@@ -264,7 +265,7 @@ void TextInput::clampCursor() {
 }
 
 // ============================================================================
-// ✅ FIXED: Use DirectWrite text metrics for accurate positioning
+// ✅ CRITICAL FIX: Precise Cursor Position using DirectWrite
 // ============================================================================
 
 size_t TextInput::getCursorPosFromPoint(const Point<int32_t>& point) const {
@@ -273,7 +274,7 @@ size_t TextInput::getCursorPosFromPoint(const Point<int32_t>& point) const {
     
     if (relX <= 0) return 0;
     
-    // ✅ Try to use extended renderer for accurate hit testing
+    // ✅ Use DirectWrite for EXACT hit testing
     if (pImpl_->extRenderer) {
         size_t pos = pImpl_->extRenderer->getCharPositionFromX(
             text_, 
@@ -283,7 +284,7 @@ size_t TextInput::getCursorPosFromPoint(const Point<int32_t>& point) const {
         return std::min(pos, text_.length());
     }
     
-    // ❌ Fallback to rough estimation (8px per char)
+    // ❌ Fallback (inaccurate - should never be used)
     size_t pos = static_cast<size_t>(relX / 8);
     return std::min(pos, text_.length());
 }
@@ -342,6 +343,10 @@ bool TextInput::handleMouseMove(const event::MouseMoveEvent& evt) {
     return false;
 }
 
+// ============================================================================
+// ✅ CRITICAL FIX: WM_CHAR Handling for Text Input
+// ============================================================================
+
 bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
     if (!focused_ || !enabled_) return false;
     if (evt.action != event::KeyEvent::Action::Press && 
@@ -353,12 +358,13 @@ bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
     bool shift = (evt.modifiers & static_cast<uint32_t>(event::ModifierKey::Shift)) != 0;
     bool isCharEvent = (evt.modifiers & 0x80000000) != 0;
     
-    // Handle WM_CHAR messages (actual character input)
+    // ✅ Handle WM_CHAR messages (actual character input)
     if (isCharEvent) {
         wchar_t ch = static_cast<wchar_t>(evt.keyCode & 0x7FFFFFFF);
         
         if (ch == 0) return false;
         
+        // Enter key
         if (ch == L'\r' || ch == L'\n') {
             if (onEnter_) {
                 onEnter_(text_);
@@ -366,15 +372,18 @@ bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
             return true;
         }
         
+        // Backspace
         if (ch == L'\b') {
             deleteChar(false);
             return true;
         }
         
+        // Tab (don't handle - let focus system handle it)
         if (ch == L'\t') {
             return false;
         }
         
+        // Printable characters (excluding control characters)
         if (ch >= 32 && ch != 0x7F) {
             insertText(std::wstring(1, ch));
             return true;
@@ -383,7 +392,7 @@ bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
         return false;
     }
     
-    // Handle navigation keys
+    // ✅ Handle navigation keys (from WM_KEYDOWN)
     using KC = event::KeyCode;
     
     switch (static_cast<KC>(evt.keyCode)) {
@@ -478,11 +487,15 @@ bool TextInput::onEvent(const event::Event& event) {
     }
 }
 
+// ============================================================================
+// ✅ RENDERING with Precise Cursor (DirectWrite Metrics)
+// ============================================================================
+
 void TextInput::render(Renderer& renderer) {
     if (!isVisible()) return;
 
     try {
-        // ✅ Cache extended renderer pointer for text measurement
+        // Cache extended renderer for measurement
         if (!pImpl_->extRenderer) {
             pImpl_->extRenderer = dynamic_cast<render::IExtendedRenderer*>(&renderer);
         }
@@ -512,16 +525,16 @@ void TextInput::render(Renderer& renderer) {
         
         if (textRect.w == 0 || textRect.h == 0) return;
         
-        // Render selection
+        // ✅ Render selection background
         if (hasSelection_ && focused_) {
             size_t start = std::min(selectionStart_, cursorPos_);
             size_t end = std::max(selectionStart_, cursorPos_);
             
-            // ✅ Use accurate text measurement for selection
             float selStartX = 0.0f;
             float selEndX = 0.0f;
             
             if (pImpl_->extRenderer) {
+                // Use DirectWrite for exact measurement
                 selStartX = pImpl_->extRenderer->measureTextWidth(text_, start, font_);
                 selEndX = pImpl_->extRenderer->measureTextWidth(text_, end, font_);
             } else {
@@ -566,22 +579,17 @@ void TextInput::render(Renderer& renderer) {
             }
         }
         
-        // ============================================================
-        // ✅ FIXED: Render cursor using accurate text measurement
-        // ============================================================
+        // ✅ RENDER CURSOR using DirectWrite measurement
         if (focused_ && cursorVisible_) {
             float cursorXOffset = 0.0f;
             
-            // Use DirectWrite to measure text width up to cursor position
             if (pImpl_->extRenderer && cursorPos_ > 0) {
+                // Use DirectWrite to measure EXACT width
                 cursorXOffset = pImpl_->extRenderer->measureTextWidth(
                     text_, 
                     cursorPos_, 
                     font_
                 );
-            } else if (cursorPos_ > 0) {
-                // ❌ Fallback (inaccurate)
-                cursorXOffset = static_cast<float>(cursorPos_ * 8);
             }
             
             int32_t cursorX = textRect.x + static_cast<int32_t>(cursorXOffset);

@@ -1,3 +1,4 @@
+// src/render/renderer_d2d.cpp (FIXED VERSION with Transform Stack)
 #include "renderer_d2d.hpp"
 #include "render/resource_cache.hpp"
 #include <stdexcept>
@@ -72,7 +73,7 @@ void RendererD2D::endRender() {
 }
 
 // ============================================================================
-// BASIC RENDERER INTERFACE (OPTIMIZED)
+// BASIC RENDERER INTERFACE (Using ResourceCache)
 // ============================================================================
 
 void RendererD2D::clear(const widget::Color& color) {
@@ -149,7 +150,7 @@ void RendererD2D::popClip() {
 }
 
 // ============================================================================
-// EXTENDED RENDERER INTERFACE (OPTIMIZED)
+// EXTENDED RENDERER INTERFACE
 // ============================================================================
 
 void RendererD2D::drawLine(
@@ -264,6 +265,7 @@ void RendererD2D::drawTextEx(
     IDWriteTextFormat* textFormat = ResourceCache::instance().getFont(font);
     if (!textFormat) return;
 
+    // Set alignment
     switch (halign) {
         case TextAlign::Left:
             textFormat->SetTextAlignment(DWRITE_TEXT_ALIGNMENT_LEADING);
@@ -347,31 +349,16 @@ cleanup_loadBitmap:
     return bitmap;
 }
 
+// ============================================================================
+// CRITICAL FIX: Transform Stack Implementation
+// ============================================================================
+
 void RendererD2D::save() {
     if (!renderTarget_) return;
     
     D2D1_MATRIX_3X2_F currentTransform;
     renderTarget_->GetTransform(&currentTransform);
     transformStack_.push(currentTransform);
-}
-
-void RendererD2D::drawBitmap(
-    void* bitmapPtr, 
-    const widget::Rect<int32_t, uint32_t>& destRect,
-    float opacity
-) {
-    if (!renderTarget_ || !bitmapPtr) return;
-
-    auto* bitmap = static_cast<ID2D1Bitmap*>(bitmapPtr);
-    D2D1_RECT_F dest = toD2DRect(destRect);
-
-    renderTarget_->DrawBitmap(
-        bitmap,
-        dest,
-        opacity,
-        D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
-        nullptr
-    );
 }
 
 void RendererD2D::restore() {
@@ -383,6 +370,7 @@ void RendererD2D::restore() {
 }
 
 void RendererD2D::setOpacity(float opacity) {
+    // Not implemented in basic version
     (void)opacity;
 }
 
@@ -413,20 +401,37 @@ void RendererD2D::translate(float dx, float dy) {
     renderTarget_->SetTransform(combined);
 }
 
+void RendererD2D::drawBitmap(
+    void* bitmapPtr, 
+    const widget::Rect<int32_t, uint32_t>& destRect,
+    float opacity
+) {
+    if (!renderTarget_ || !bitmapPtr) return;
+
+    auto* bitmap = static_cast<ID2D1Bitmap*>(bitmapPtr);
+    D2D1_RECT_F dest = toD2DRect(destRect);
+
+    renderTarget_->DrawBitmap(
+        bitmap,
+        dest,
+        opacity,
+        D2D1_BITMAP_INTERPOLATION_MODE_LINEAR,
+        nullptr
+    );
+}
+
+// ============================================================================
+// TEXT MEASUREMENT (For TextInput cursor positioning)
+// ============================================================================
+
 float RendererD2D::measureTextWidth(
     const std::wstring& text, 
     size_t length,
     const FontStyle& font
 ) const {
-    IDWriteFactory* writeFactory = nullptr;
-    HRESULT hr = DWriteCreateFactory(
-        DWRITE_FACTORY_TYPE_SHARED,
-        __uuidof(IDWriteFactory),
-        reinterpret_cast<IUnknown**>(&writeFactory)
-    );
+    auto* writeFactory = ResourceCache::instance().getWriteFactory();
     
-    if (FAILED(hr) || !writeFactory || text.empty() || length == 0) {
-        if (writeFactory) writeFactory->Release();
+    if (!writeFactory || text.empty() || length == 0) {
         return 0.0f;
     }
     
@@ -434,22 +439,20 @@ float RendererD2D::measureTextWidth(
     
     IDWriteTextFormat* textFormat = ResourceCache::instance().getFont(font);
     if (!textFormat) {
-        writeFactory->Release();
         return 0.0f;
     }
     
     IDWriteTextLayout* textLayout = nullptr;
-    hr = writeFactory->CreateTextLayout(
+    HRESULT hr = writeFactory->CreateTextLayout(
         text.c_str(),
         static_cast<UINT32>(length),
         textFormat,
-        10000.0f,
-        100.0f,
+        10000.0f,  // Max width
+        100.0f,    // Max height
         &textLayout
     );
     
     if (FAILED(hr)) {
-        writeFactory->Release();
         return 0.0f;
     }
     
@@ -462,7 +465,6 @@ float RendererD2D::measureTextWidth(
     }
     
     textLayout->Release();
-    writeFactory->Release();
     
     return width;
 }
@@ -472,26 +474,19 @@ size_t RendererD2D::getCharPositionFromX(
     float x,
     const FontStyle& font
 ) const {
-    IDWriteFactory* writeFactory = nullptr;
-    HRESULT hr = DWriteCreateFactory(
-        DWRITE_FACTORY_TYPE_SHARED,
-        __uuidof(IDWriteFactory),
-        reinterpret_cast<IUnknown**>(&writeFactory)
-    );
+    auto* writeFactory = ResourceCache::instance().getWriteFactory();
     
-    if (FAILED(hr) || !writeFactory || text.empty() || x <= 0.0f) {
-        if (writeFactory) writeFactory->Release();
+    if (!writeFactory || text.empty() || x <= 0.0f) {
         return 0;
     }
     
     IDWriteTextFormat* textFormat = ResourceCache::instance().getFont(font);
     if (!textFormat) {
-        writeFactory->Release();
         return 0;
     }
     
     IDWriteTextLayout* textLayout = nullptr;
-    hr = writeFactory->CreateTextLayout(
+    HRESULT hr = writeFactory->CreateTextLayout(
         text.c_str(),
         static_cast<UINT32>(text.length()),
         textFormat,
@@ -501,7 +496,6 @@ size_t RendererD2D::getCharPositionFromX(
     );
     
     if (FAILED(hr)) {
-        writeFactory->Release();
         return 0;
     }
     
@@ -528,7 +522,6 @@ size_t RendererD2D::getCharPositionFromX(
     }
     
     textLayout->Release();
-    writeFactory->Release();
     
     return std::min(position, text.length());
 }

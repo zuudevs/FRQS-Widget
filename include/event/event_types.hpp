@@ -1,3 +1,4 @@
+// include/event/event_types.hpp
 #pragma once
 
 #include <cstdint>
@@ -216,7 +217,7 @@ enum class CursorType : uint8_t {
 };
 
 // ============================================================================
-// FILE DROP EVENT (NEW)
+// FILE DROP EVENT (FIXED - Added to event_types.hpp)
 // ============================================================================
 
 struct FileDropEvent {

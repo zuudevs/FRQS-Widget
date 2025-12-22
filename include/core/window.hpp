@@ -3,8 +3,8 @@
 #include <memory>
 #include <string>
 #include "window_id.hpp"
-#include "../unit/rect.hpp"
-#include "../widget/iwidget.hpp"
+#include "unit/rect.hpp"
+#include "widget/iwidget.hpp"
 
 // Forward declare kelas Win32WindowClass
 namespace frqs::platform {

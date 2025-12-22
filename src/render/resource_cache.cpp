@@ -1,3 +1,4 @@
+// src/render/resource_cache.cpp
 #include "render/resource_cache.hpp"
 #include <stdexcept>
 
@@ -39,6 +40,7 @@ ResourceCache::~ResourceCache() noexcept {
 IDWriteTextFormat* ResourceCache::getFont(const FontStyle& style) {
     std::lock_guard<std::mutex> lock(mutex_);
     
+    // Check cache
     auto it = fontCache_.find(style);
     if (it != fontCache_.end()) {
         return it->second;
@@ -48,16 +50,17 @@ IDWriteTextFormat* ResourceCache::getFont(const FontStyle& style) {
         return nullptr;
     }
     
+    // Create new text format
     IDWriteTextFormat* textFormat = nullptr;
     
     HRESULT hr = writeFactory_->CreateTextFormat(
         style.family.c_str(),
-        nullptr,
+        nullptr,  // Font collection (NULL = system)
         style.bold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL,
         style.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
         DWRITE_FONT_STRETCH_NORMAL,
         style.size,
-        L"en-us",
+        L"en-us",  // Locale
         &textFormat
     );
     
@@ -65,6 +68,7 @@ IDWriteTextFormat* ResourceCache::getFont(const FontStyle& style) {
         return nullptr;
     }
     
+    // Cache and return
     fontCache_[style] = textFormat;
     
     return textFormat;
@@ -90,11 +94,13 @@ ID2D1SolidColorBrush* ResourceCache::getBrush(
     
     ColorKey key(color);
     
+    // Check cache
     auto it = brushCache_.find(key);
     if (it != brushCache_.end()) {
         return it->second;
     }
     
+    // Create new brush
     ID2D1SolidColorBrush* brush = nullptr;
     
     D2D1_COLOR_F d2dColor = D2D1::ColorF(
@@ -110,6 +116,7 @@ ID2D1SolidColorBrush* ResourceCache::getBrush(
         return nullptr;
     }
     
+    // Cache and return
     brushCache_[key] = brush;
     
     return brush;

@@ -24,26 +24,13 @@ namespace frqs::widget {
            point.y < static_cast<int32_t>(rect.getBottom());
 }
 
-// Find widget at position (recursive search)
+// Find widget at position using hit-test (DEPRECATED - use hitTest() instead)
 [[nodiscard]] inline IWidget* findWidgetAt(
     IWidget* root,
     const Point<int32_t>& point
 ) noexcept {
-    if (!root || !root->isVisible()) return nullptr;
-    
-    // Check children first (front to back)
-    for (const auto& child : root->getChildren()) {
-        if (auto found = findWidgetAt(child.get(), point)) {
-            return found;
-        }
-    }
-    
-    // Check self
-    if (isPointInside(root, point)) {
-        return root;
-    }
-    
-    return nullptr;
+    if (!root) return nullptr;
+    return root->hitTest(point);
 }
 
 // Visit all widgets in tree (depth-first)
