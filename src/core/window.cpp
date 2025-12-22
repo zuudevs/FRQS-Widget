@@ -379,4 +379,94 @@ void* Window::getNativeHandleUnsafe() const noexcept {
     return pImpl_->hwnd;
 }
 
+void Window::dispatchEvent(const event::Event& event) {
+    if (!pImpl_->rootWidget) return;
+    
+    // ===================================================================
+    // MOUSE EVENTS: Use hit-testing to find target widget
+    // ===================================================================
+    if (auto* mouseMove = std::get_if<event::MouseMoveEvent>(&event)) {
+        auto* target = pImpl_->rootWidget->hitTest(mouseMove->position);
+        if (target) {
+            // Try target first
+            if (target->onEvent(event)) return;
+            
+            // Bubble up if not handled
+            auto* parent = target->getParent();
+            while (parent) {
+                if (parent->onEvent(event)) return;
+                parent = parent->getParent();
+            }
+        }
+        return;
+    }
+    
+    if (auto* mouseButton = std::get_if<event::MouseButtonEvent>(&event)) {
+        auto* target = pImpl_->rootWidget->hitTest(mouseButton->position);
+        if (target) {
+            if (target->onEvent(event)) return;
+            
+            auto* parent = target->getParent();
+            while (parent) {
+                if (parent->onEvent(event)) return;
+                parent = parent->getParent();
+            }
+        }
+        return;
+    }
+    
+    if (auto* mouseWheel = std::get_if<event::MouseWheelEvent>(&event)) {
+        auto* target = pImpl_->rootWidget->hitTest(mouseWheel->position);
+        if (target) {
+            if (target->onEvent(event)) return;
+            
+            auto* parent = target->getParent();
+            while (parent) {
+                if (parent->onEvent(event)) return;
+                parent = parent->getParent();
+            }
+        }
+        return;
+    }
+    
+    // ===================================================================
+    // FILE DROP: Use hit-testing to find target widget
+    // ===================================================================
+    if (auto* fileDrop = std::get_if<event::FileDropEvent>(&event)) {
+        auto* target = pImpl_->rootWidget->hitTest(fileDrop->position);
+        if (target) {
+            if (target->onEvent(event)) return;
+            
+            auto* parent = target->getParent();
+            while (parent) {
+                if (parent->onEvent(event)) return;
+                parent = parent->getParent();
+            }
+        }
+        return;
+    }
+    
+    // ===================================================================
+    // KEYBOARD EVENTS: Send to focused widget or root
+    // ===================================================================
+    if (std::holds_alternative<event::KeyEvent>(event)) {
+        // TODO: Implement focus management
+        // For now, send to root widget
+        pImpl_->rootWidget->onEvent(event);
+        return;
+    }
+    
+    // ===================================================================
+    // WINDOW EVENTS: Broadcast to entire tree
+    // ===================================================================
+    if (std::holds_alternative<event::ResizeEvent>(event) ||
+        std::holds_alternative<event::PaintEvent>(event)) {
+        pImpl_->rootWidget->onEvent(event);
+        return;
+    }
+    
+    // Default: broadcast to root
+    pImpl_->rootWidget->onEvent(event);
+}
+
 } // namespace frqs::core

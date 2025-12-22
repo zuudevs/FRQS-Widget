@@ -1,4 +1,3 @@
-// src/widget/scroll_view.cpp - COMPLETE with Draggable Scrollbars
 #include "widget/scroll_view.hpp"
 #include "render/renderer.hpp"
 #include <algorithm>
@@ -54,7 +53,52 @@ void ScrollView::scrollToBottom() {
 }
 
 // ============================================================================
-// EVENT HANDLING (UPDATED with Drag Logic)
+// HIT-TEST OVERRIDE (CRITICAL FIX)
+// ============================================================================
+
+IWidget* ScrollView::hitTest(const Point<int32_t>& point) {
+    // 1. Check visibility
+    if (!isVisible()) return nullptr;
+    
+    // 2. Check if point is inside viewport
+    auto viewport = getViewportRect();
+    if (point.x < viewport.x || point.x >= static_cast<int32_t>(viewport.getRight()) ||
+        point.y < viewport.y || point.y >= static_cast<int32_t>(viewport.getBottom())) {
+        return nullptr;
+    }
+    
+    // 3. Check scrollbars first (they're on top)
+    if (showScrollbars_) {
+        auto vScrollbar = getVerticalScrollbarRect();
+        if (vScrollbar.w > 0 &&
+            point.x >= vScrollbar.x && point.x < static_cast<int32_t>(vScrollbar.getRight()) &&
+            point.y >= vScrollbar.y && point.y < static_cast<int32_t>(vScrollbar.getBottom())) {
+            return this; // Scrollbar was hit
+        }
+        
+        auto hScrollbar = getHorizontalScrollbarRect();
+        if (hScrollbar.h > 0 &&
+            point.x >= hScrollbar.x && point.x < static_cast<int32_t>(hScrollbar.getRight()) &&
+            point.y >= hScrollbar.y && point.y < static_cast<int32_t>(hScrollbar.getBottom())) {
+            return this; // Scrollbar was hit
+        }
+    }
+    
+    // 4. Transform point to content space
+    Point<int32_t> contentPoint = translateToContentSpace(point);
+    
+    // 5. Test content widget
+    if (content_) {
+        auto* result = content_->hitTest(contentPoint);
+        if (result) return result;
+    }
+    
+    // 6. ScrollView itself was hit
+    return this;
+}
+
+// ============================================================================
+// EVENT HANDLING
 // ============================================================================
 
 void ScrollView::setRect(const Rect<int32_t, uint32_t>& rect) {
@@ -71,61 +115,25 @@ bool ScrollView::onEvent(const event::Event& event) {
         }
     }
 
-    // Mouse button (NEW - for dragging)
+    // Mouse button (for dragging scrollbars)
     if (auto* btnEvt = std::get_if<event::MouseButtonEvent>(&event)) {
         if (handleMouseButton(*btnEvt)) {
             return true;
         }
     }
 
-    // Mouse move (NEW - for dragging + hover)
+    // Mouse move (for dragging + hover)
     if (auto* moveEvt = std::get_if<event::MouseMoveEvent>(&event)) {
         if (handleMouseMove(*moveEvt)) {
             return true;
         }
     }
 
-    // Forward to content
-    if (content_) {
-        auto viewport = getViewportRect();
-        
-        // Check if event is inside viewport
-        if (auto* moveEvt = std::get_if<event::MouseMoveEvent>(&event)) {
-            bool insideViewport = 
-                moveEvt->position.x >= viewport.x && 
-                moveEvt->position.x < static_cast<int32_t>(viewport.getRight()) &&
-                moveEvt->position.y >= viewport.y && 
-                moveEvt->position.y < static_cast<int32_t>(viewport.getBottom());
-            
-            if (insideViewport) {
-                event::MouseMoveEvent transformed = *moveEvt;
-                transformed.position = translateToContentSpace(moveEvt->position);
-                return content_->onEvent(event::Event(transformed));
-            }
-        }
-        
-        if (auto* btnEvt = std::get_if<event::MouseButtonEvent>(&event)) {
-            bool insideViewport = 
-                btnEvt->position.x >= viewport.x && 
-                btnEvt->position.x < static_cast<int32_t>(viewport.getRight()) &&
-                btnEvt->position.y >= viewport.y && 
-                btnEvt->position.y < static_cast<int32_t>(viewport.getBottom());
-            
-            if (insideViewport) {
-                event::MouseButtonEvent transformed = *btnEvt;
-                transformed.position = translateToContentSpace(btnEvt->position);
-                return content_->onEvent(event::Event(transformed));
-            }
-        }
-        
-        return content_->onEvent(event);
-    }
-
     return false;
 }
 
 // ============================================================================
-// MOUSE EVENT HANDLERS (NEW)
+// MOUSE EVENT HANDLERS
 // ============================================================================
 
 bool ScrollView::handleMouseWheel(const event::MouseWheelEvent& evt) {
@@ -149,9 +157,10 @@ bool ScrollView::handleMouseButton(const event::MouseButtonEvent& evt) {
     if (evt.button != event::MouseButtonEvent::Button::Left) return false;
     
     if (evt.action == event::MouseButtonEvent::Action::Press) {
-        // Check if clicking on vertical scrollbar thumb
+        // Check vertical scrollbar thumb
         auto vThumb = getVerticalThumbRect();
-        if (evt.position.x >= vThumb.x && evt.position.x < static_cast<int32_t>(vThumb.getRight()) &&
+        if (vThumb.w > 0 &&
+            evt.position.x >= vThumb.x && evt.position.x < static_cast<int32_t>(vThumb.getRight()) &&
             evt.position.y >= vThumb.y && evt.position.y < static_cast<int32_t>(vThumb.getBottom())) {
             draggingVScroll_ = true;
             dragStartPos_ = evt.position;
@@ -159,9 +168,10 @@ bool ScrollView::handleMouseButton(const event::MouseButtonEvent& evt) {
             return true;
         }
         
-        // Check if clicking on horizontal scrollbar thumb
+        // Check horizontal scrollbar thumb
         auto hThumb = getHorizontalThumbRect();
-        if (evt.position.x >= hThumb.x && evt.position.x < static_cast<int32_t>(hThumb.getRight()) &&
+        if (hThumb.h > 0 &&
+            evt.position.x >= hThumb.x && evt.position.x < static_cast<int32_t>(hThumb.getRight()) &&
             evt.position.y >= hThumb.y && evt.position.y < static_cast<int32_t>(hThumb.getBottom())) {
             draggingHScroll_ = true;
             dragStartPos_ = evt.position;
@@ -169,11 +179,11 @@ bool ScrollView::handleMouseButton(const event::MouseButtonEvent& evt) {
             return true;
         }
         
-        // Check if clicking on vertical scrollbar track (jump scroll)
+        // Check vertical scrollbar track (jump scroll)
         auto vScrollbar = getVerticalScrollbarRect();
-        if (evt.position.x >= vScrollbar.x && evt.position.x < static_cast<int32_t>(vScrollbar.getRight()) &&
+        if (vScrollbar.w > 0 &&
+            evt.position.x >= vScrollbar.x && evt.position.x < static_cast<int32_t>(vScrollbar.getRight()) &&
             evt.position.y >= vScrollbar.y && evt.position.y < static_cast<int32_t>(vScrollbar.getBottom())) {
-            // Calculate target scroll position
             float ratio = static_cast<float>(evt.position.y - vScrollbar.y) / vScrollbar.h;
             auto viewport = getViewportRect();
             float maxScroll = std::max(0.0f, static_cast<float>(contentSize_.h - viewport.h));
@@ -181,9 +191,10 @@ bool ScrollView::handleMouseButton(const event::MouseButtonEvent& evt) {
             return true;
         }
         
-        // Check if clicking on horizontal scrollbar track
+        // Check horizontal scrollbar track
         auto hScrollbar = getHorizontalScrollbarRect();
-        if (evt.position.x >= hScrollbar.x && evt.position.x < static_cast<int32_t>(hScrollbar.getRight()) &&
+        if (hScrollbar.h > 0 &&
+            evt.position.x >= hScrollbar.x && evt.position.x < static_cast<int32_t>(hScrollbar.getRight()) &&
             evt.position.y >= hScrollbar.y && evt.position.y < static_cast<int32_t>(hScrollbar.getBottom())) {
             float ratio = static_cast<float>(evt.position.x - hScrollbar.x) / hScrollbar.w;
             auto viewport = getViewportRect();
@@ -239,7 +250,7 @@ bool ScrollView::handleMouseMove(const event::MouseMoveEvent& evt) {
         return true;
     }
     
-    // Update hover state for visual feedback
+    // Update hover state
     bool wasHoveringV = hoveringVScroll_;
     bool wasHoveringH = hoveringHScroll_;
     
@@ -254,25 +265,7 @@ bool ScrollView::handleMouseMove(const event::MouseMoveEvent& evt) {
 }
 
 // ============================================================================
-// HIT TESTING (NEW)
-// ============================================================================
-
-bool ScrollView::isPointInVerticalScrollbar(const Point<int32_t>& point) const {
-    auto thumbRect = getVerticalThumbRect();
-    return thumbRect.w > 0 && 
-           point.x >= thumbRect.x && point.x < static_cast<int32_t>(thumbRect.getRight()) &&
-           point.y >= thumbRect.y && point.y < static_cast<int32_t>(thumbRect.getBottom());
-}
-
-bool ScrollView::isPointInHorizontalScrollbar(const Point<int32_t>& point) const {
-    auto thumbRect = getHorizontalThumbRect();
-    return thumbRect.h > 0 && 
-           point.x >= thumbRect.x && point.x < static_cast<int32_t>(thumbRect.getRight()) &&
-           point.y >= thumbRect.y && point.y < static_cast<int32_t>(thumbRect.getBottom());
-}
-
-// ============================================================================
-// RENDER & HELPERS (Unchanged)
+// RENDER (CRITICAL FIX: Proper Transform Stack)
 // ============================================================================
 
 void ScrollView::render(Renderer& renderer) {
@@ -289,25 +282,40 @@ void ScrollView::render(Renderer& renderer) {
         return;
     }
 
-    // Render content with clipping and translation
+    // ✅ CRITICAL FIX: Proper transform stack management
     auto* extRenderer = dynamic_cast<render::IExtendedRenderer*>(&renderer);
     if (!extRenderer) {
+        // Fallback: render without transform
         content_->render(renderer);
+        renderScrollbars(renderer);
         return;
     }
 
+    // 1. Push clip to viewport
     renderer.pushClip(viewport);
+    
+    // 2. Save current transform
     extRenderer->save();
+    
+    // 3. Apply scroll translation
     extRenderer->translate(-scrollOffset_.x, -scrollOffset_.y);
     
+    // 4. Render content (transformed)
     content_->render(renderer);
     
+    // 5. Restore transform
     extRenderer->restore();
+    
+    // 6. Pop clip
     renderer.popClip();
 
-    // Render scrollbars on top
+    // 7. Render scrollbars on top (no transform)
     renderScrollbars(renderer);
 }
+
+// ============================================================================
+// HELPER METHODS
+// ============================================================================
 
 void ScrollView::updateContentSize() {
     if (!content_) {
@@ -411,10 +419,8 @@ void ScrollView::renderScrollbars(Renderer& renderer) {
         auto scrollbarRect = getVerticalScrollbarRect();
         auto thumbRect = getVerticalThumbRect();
         
-        // Track background
         renderer.fillRect(scrollbarRect, Color(240, 240, 240, 200));
         
-        // Thumb (with hover effect)
         Color thumbColor = hoveringVScroll_ ? scrollbarHoverColor_ : scrollbarColor_;
         renderer.fillRect(thumbRect, thumbColor);
     }
@@ -437,6 +443,20 @@ Point<int32_t> ScrollView::translateToContentSpace(const Point<int32_t>& screenP
         screenPoint.x - viewport.x + static_cast<int32_t>(scrollOffset_.x),
         screenPoint.y - viewport.y + static_cast<int32_t>(scrollOffset_.y)
     );
+}
+
+bool ScrollView::isPointInVerticalScrollbar(const Point<int32_t>& point) const {
+    auto thumbRect = getVerticalThumbRect();
+    return thumbRect.w > 0 && 
+           point.x >= thumbRect.x && point.x < static_cast<int32_t>(thumbRect.getRight()) &&
+           point.y >= thumbRect.y && point.y < static_cast<int32_t>(thumbRect.getBottom());
+}
+
+bool ScrollView::isPointInHorizontalScrollbar(const Point<int32_t>& point) const {
+    auto thumbRect = getHorizontalThumbRect();
+    return thumbRect.h > 0 && 
+           point.x >= thumbRect.x && point.x < static_cast<int32_t>(thumbRect.getRight()) &&
+           point.y >= thumbRect.y && point.y < static_cast<int32_t>(thumbRect.getBottom());
 }
 
 } // namespace frqs::widget

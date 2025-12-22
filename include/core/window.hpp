@@ -101,6 +101,8 @@ public:
     void invalidate() noexcept;  // Full repaint
     void invalidateRect(const widget::Rect<int32_t, uint32_t>& rect) noexcept;
     void forceRedraw() noexcept;  // Immediate redraw
+	
+	void dispatchEvent(const event::Event& event) ;
 
     // Window ID (for registry lookups)
     WindowId getId() const noexcept { return id_; }

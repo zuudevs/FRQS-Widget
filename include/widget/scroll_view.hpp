@@ -30,6 +30,7 @@ public:
     void scrollBy(float dx, float dy);
     void scrollToTop() { scrollTo(scrollOffset_.x, 0.0f); }
     void scrollToBottom();
+	IWidget* hitTest(const Point<int32_t>& point) override ;
 
     Point<float> getScrollOffset() const noexcept { return scrollOffset_; }
     Size<uint32_t> getContentSize() const noexcept { return contentSize_; }

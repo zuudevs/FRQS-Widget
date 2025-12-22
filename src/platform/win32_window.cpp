@@ -3,6 +3,8 @@
 #include "core/application.hpp"
 #include "core/window_impl.hpp"
 #include "event/event_types.hpp"
+#include <shellapi.h>
+#include <filesystem>
 #include <unordered_map>
 #include <mutex>
 
@@ -37,18 +39,18 @@ private:
 
     void registerClass() {
         WNDCLASSEXW wcex = {};
-		wcex.cbSize = sizeof(WNDCLASSEXW);
-		wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
-		wcex.lpfnWndProc = windowProc;
-		wcex.cbClsExtra = 0;
-		wcex.cbWndExtra = sizeof(void*);
-		wcex.hInstance = hInstance_;
-		wcex.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
-		wcex.hCursor = LoadCursorW(nullptr, IDC_ARROW);
-		wcex.hbrBackground = nullptr;
-		wcex.lpszMenuName = nullptr;
-		wcex.lpszClassName = CLASS_NAME;
-		wcex.hIconSm = LoadIconW(nullptr, IDI_APPLICATION);
+        wcex.cbSize = sizeof(WNDCLASSEXW);
+        wcex.style = CS_HREDRAW | CS_VREDRAW | CS_OWNDC;
+        wcex.lpfnWndProc = windowProc;
+        wcex.cbClsExtra = 0;
+        wcex.cbWndExtra = sizeof(void*);
+        wcex.hInstance = hInstance_;
+        wcex.hIcon = LoadIconW(nullptr, IDI_APPLICATION);
+        wcex.hCursor = LoadCursorW(nullptr, IDC_ARROW);
+        wcex.hbrBackground = nullptr;
+        wcex.lpszMenuName = nullptr;
+        wcex.lpszClassName = CLASS_NAME;
+        wcex.hIconSm = LoadIconW(nullptr, IDI_APPLICATION);
 
         classAtom_ = RegisterClassExW(&wcex);
         if (!classAtom_) {
@@ -150,6 +152,9 @@ private:
                 pImpl->focused = false;
                 return 0;
 
+            // ================================================================
+            // CRITICAL: WM_CHAR - Text Input
+            // ================================================================
             case WM_CHAR: {
                 if (!pImpl->rootWidget) return 0;
                 
@@ -176,15 +181,17 @@ private:
                     .timestamp = static_cast<uint64_t>(GetTickCount64())
                 };
                 
-                event::Event e = evt;
-                pImpl->rootWidget->onEvent(e);
+                window->dispatchEvent(event::Event(evt));
                 return 0;
             }
 
-            case WM_KEYDOWN :
-            case WM_KEYUP :
-            case WM_SYSKEYDOWN :
-            case WM_SYSKEYUP :{
+            // ================================================================
+            // CRITICAL: WM_KEYDOWN / WM_KEYUP - Navigation Keys
+            // ================================================================
+            case WM_KEYDOWN:
+            case WM_KEYUP:
+            case WM_SYSKEYDOWN:
+            case WM_SYSKEYUP: {
                 if (!pImpl->rootWidget) break;
                 
                 event::KeyEvent::Action action;
@@ -208,16 +215,18 @@ private:
                     .timestamp = static_cast<uint64_t>(GetTickCount64())
                 };
                 
-                event::Event e = evt;
-                pImpl->rootWidget->onEvent(e);
+                window->dispatchEvent(event::Event(evt));
                 
                 // Always break to allow DefWindowProc to generate WM_CHAR
                 break;
             }
 
-            case WM_LBUTTONDOWN : 
-            case WM_RBUTTONDOWN : 
-            case WM_MBUTTONDOWN : {
+            // ================================================================
+            // CRITICAL: WM_LBUTTONDOWN / WM_RBUTTONDOWN / WM_MBUTTONDOWN
+            // ================================================================
+            case WM_LBUTTONDOWN:
+            case WM_RBUTTONDOWN:
+            case WM_MBUTTONDOWN: {
                 if (!pImpl->rootWidget) return 0;
                 
                 event::MouseButtonEvent::Button btn;
@@ -240,14 +249,16 @@ private:
                     .timestamp = static_cast<uint64_t>(GetTickCount64())
                 };
                 
-                event::Event e = evt;
-                pImpl->rootWidget->onEvent(e);
+                window->dispatchEvent(event::Event(evt));
                 return 0;
             }
 
-            case WM_LBUTTONUP : 
-            case WM_RBUTTONUP : 
-            case WM_MBUTTONUP : {
+            // ================================================================
+            // CRITICAL: WM_LBUTTONUP / WM_RBUTTONUP / WM_MBUTTONUP
+            // ================================================================
+            case WM_LBUTTONUP:
+            case WM_RBUTTONUP:
+            case WM_MBUTTONUP: {
                 if (!pImpl->rootWidget) return 0;
                 
                 event::MouseButtonEvent::Button btn;
@@ -270,12 +281,14 @@ private:
                     .timestamp = static_cast<uint64_t>(GetTickCount64())
                 };
                 
-                event::Event e = evt;
-                pImpl->rootWidget->onEvent(e);
+                window->dispatchEvent(event::Event(evt));
                 return 0;
             }
 
-            case WM_MOUSEMOVE : {
+            // ================================================================
+            // CRITICAL: WM_MOUSEMOVE
+            // ================================================================
+            case WM_MOUSEMOVE: {
                 if (!pImpl->rootWidget) return 0;
                 
                 static widget::Point<int32_t> lastPos(0, 0);
@@ -296,79 +309,84 @@ private:
                 
                 lastPos = evt.position;
                 
-                event::Event e = evt;
-                pImpl->rootWidget->onEvent(e);
+                window->dispatchEvent(event::Event(evt));
                 return 0;
             }
 
+            // ================================================================
+            // CRITICAL: WM_MOUSEWHEEL - Scroll Event
+            // ================================================================
             case WM_MOUSEWHEEL: {
-				if (!pImpl->rootWidget) return 0;
-				
-				// Extract wheel delta (in units of WHEEL_DELTA = 120)
-				int32_t delta = GET_WHEEL_DELTA_WPARAM(wp);
-				
-				// Get mouse position (in screen coordinates)
-				POINT pt;
-				pt.x = GET_X_LPARAM(lp);
-				pt.y = GET_Y_LPARAM(lp);
-				ScreenToClient(hwnd, &pt);
-				
-				// Get modifiers
-				uint32_t mods = 0;
-				if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
-				if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
-				if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
-				
-				event::MouseWheelEvent evt{
-					.delta = delta,
-					.position = widget::Point<int32_t>(pt.x, pt.y),
-					.modifiers = mods,
-					.timestamp = static_cast<uint64_t>(GetTickCount64())
-				};
-				
-				event::Event e = evt;
-				pImpl->rootWidget->onEvent(e);
-				
-				return 0;
-			}
-
-			case WM_DROPFILES: {
-            if (!pImpl->rootWidget) return 0;
-            
-            HDROP hDrop = reinterpret_cast<HDROP>(wp);
-            
-            // Get drop position
-            POINT pt;
-            DragQueryPoint(hDrop, &pt);
-            
-            // Get number of files
-            UINT fileCount = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
-            
-            if (fileCount > 0) {
-                std::vector<std::wstring> files;
-                files.reserve(fileCount);
+                if (!pImpl->rootWidget) return 0;
                 
-                // Get each file path
-                for (UINT i = 0; i < fileCount; ++i) {
-                    UINT pathLen = DragQueryFileW(hDrop, i, nullptr, 0);
-                    if (pathLen > 0) {
-                        std::wstring path(pathLen, L'\0');
-                        DragQueryFileW(hDrop, i, path.data(), pathLen + 1);
-                        files.push_back(std::move(path));
+                // Extract wheel delta (in units of WHEEL_DELTA = 120)
+                int32_t delta = GET_WHEEL_DELTA_WPARAM(wp);
+                
+                // Get mouse position (in screen coordinates)
+                POINT pt;
+                pt.x = GET_X_LPARAM(lp);
+                pt.y = GET_Y_LPARAM(lp);
+                ScreenToClient(hwnd, &pt);
+                
+                // Get modifiers
+                uint32_t mods = 0;
+                if (GetKeyState(VK_CONTROL) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Control);
+                if (GetKeyState(VK_SHIFT) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Shift);
+                if (GetKeyState(VK_MENU) & 0x8000) mods |= static_cast<uint32_t>(event::ModifierKey::Alt);
+                
+                event::MouseWheelEvent evt{
+                    .delta = delta,
+                    .position = widget::Point<int32_t>(pt.x, pt.y),
+                    .modifiers = mods,
+                    .timestamp = static_cast<uint64_t>(GetTickCount64())
+                };
+                
+                window->dispatchEvent(event::Event(evt));
+                return 0;
+            }
+
+            // ================================================================
+            // CRITICAL: WM_DROPFILES - File Drop Event
+            // ================================================================
+            case WM_DROPFILES: {
+                if (!pImpl->rootWidget) return 0;
+                
+                HDROP hDrop = reinterpret_cast<HDROP>(wp);
+                
+                // Get drop position
+                POINT pt;
+                DragQueryPoint(hDrop, &pt);
+                
+                // Get number of files
+                UINT fileCount = DragQueryFileW(hDrop, 0xFFFFFFFF, nullptr, 0);
+                
+                if (fileCount > 0) {
+                    std::vector<std::wstring> files;
+                    files.reserve(fileCount);
+                    
+                    // Get each file path
+                    for (UINT i = 0; i < fileCount; ++i) {
+                        UINT pathLen = DragQueryFileW(hDrop, i, nullptr, 0);
+                        if (pathLen > 0) {
+                            std::wstring path(pathLen, L'\0');
+                            DragQueryFileW(hDrop, i, path.data(), pathLen + 1);
+                            files.push_back(std::move(path));
+                        }
                     }
+                    
+                    // Create FileDropEvent
+                    event::FileDropEvent evt(
+                        widget::Point<int32_t>(pt.x, pt.y),
+                        files
+                    );
+                    
+                    // Dispatch to widget tree
+                    window->dispatchEvent(event::Event(std::move(evt)));
                 }
                 
-                // Create FileDrop event
-                event::FileDropEvent evt{files, widget::Point<int32_t>(pt.x, pt.y)};
-                event::Event e = std::move(evt);
-                
-                // Dispatch to widget tree
-                pImpl->rootWidget->onEvent(e);
+                DragFinish(hDrop);
+                return 0;
             }
-            
-            DragFinish(hDrop);
-            return 0;
-        }
 
             default:
                 return DefWindowProcW(hwnd, msg, wp, lp);
@@ -422,7 +440,7 @@ HWND createNativeWindow(
     Win32WindowClass::ensureRegistered();
 
     DWORD style = WS_OVERLAPPEDWINDOW;
-    DWORD exStyle = WS_EX_APPWINDOW | WS_EX_ACCEPTFILES;  // ← ADD THIS!
+    DWORD exStyle = WS_EX_APPWINDOW | WS_EX_ACCEPTFILES;  // ✅ CRITICAL: Enable file drop
 
     if (!params.decorated) {
         style = WS_POPUP | WS_THICKFRAME;
@@ -453,7 +471,6 @@ HWND createNativeWindow(
         throw std::runtime_error("Failed to create native window");
     }
 
-    // ✅ Enable drag & drop
     DragAcceptFiles(hwnd, TRUE);
 
     if (params.visible) {
