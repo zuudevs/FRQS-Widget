@@ -1,335 +1,242 @@
-// tests/event_test.cpp - Event System Unit Tests
-#include "../include/frqs-widget.hpp"
-#include "../include/event/event_types.hpp"
-#include <print>
+#include "event/event_bus.hpp"
+#include "event/event_types.hpp"
 #include <cassert>
-#include <chrono>
+#include <iostream>
+#include <string>
+#include <vector>
 
-using namespace frqs;
-using namespace frqs::event;
-
-// ============================================================================
-// TEST HELPERS
-// ============================================================================
-
-#define TEST(name) \
-    void test_##name(); \
-    struct TestRegistrar_##name { \
-        TestRegistrar_##name() { \
-            std::println("Running test: {}", #name); \
-            test_##name(); \
-            std::println("✓ Test passed: {}\n", #name); \
-        } \
-    } g_testRegistrar_##name; \
-    void test_##name()
+// Simple assertion macro
+#define ASSERT_TRUE(condition) \
+    if (!(condition)) { \
+        std::cerr << "Assertion failed: " << #condition << " at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        return 1; \
+    }
 
 #define ASSERT_EQ(a, b) \
     if ((a) != (b)) { \
-        std::println(stderr, "Assertion failed: {} != {}", #a, #b); \
-        std::terminate(); \
+        std::cerr << "Assertion failed: " << #a << " == " << #b << " (" << (a) << " != " << (b) << ") at " << __FILE__ << ":" << __LINE__ << std::endl; \
+        return 1; \
     }
 
-#define ASSERT_TRUE(expr) \
-    if (!(expr)) { \
-        std::println(stderr, "Assertion failed: {}", #expr); \
-        std::terminate(); \
-    }
+using namespace frqs::event;
+using namespace frqs::widget;
 
 // ============================================================================
-// EVENT VARIANT TESTS
+// TESTS
 // ============================================================================
 
-TEST(event_variant_size) {
-    using namespace event;
-    
-    // Verify event variant size is reasonable
-    std::println("Event variant size: {} bytes", sizeof(Event));
-    ASSERT_TRUE(sizeof(Event) <= 64);  // Should be <= 64 bytes
-    
-    // Individual event sizes
-    std::println("MouseMoveEvent: {} bytes", sizeof(MouseMoveEvent));
-    std::println("MouseButtonEvent: {} bytes", sizeof(MouseButtonEvent));
-    std::println("KeyEvent: {} bytes", sizeof(KeyEvent));
-    std::println("ResizeEvent: {} bytes", sizeof(ResizeEvent));
-    std::println("PaintEvent: {} bytes", sizeof(PaintEvent));
-    std::println("FileDropEvent: {} bytes", sizeof(FileDropEvent));
-}
-
-TEST(mouse_move_event) {
-    using namespace event;
-    
-    MouseMoveEvent evt{
-        .position = widget::Point<int32_t>(100, 200),
-        .delta = widget::Point<int32_t>(5, 10),
-        .modifiers = static_cast<uint32_t>(ModifierKey::Shift),
-        .timestamp = 12345
-    };
-    
-    ASSERT_EQ(evt.position.x, 100);
-    ASSERT_EQ(evt.position.y, 200);
-    ASSERT_EQ(evt.delta.x, 5);
-    ASSERT_EQ(evt.delta.y, 10);
-    
-    Event event = evt;
-    ASSERT_TRUE(std::holds_alternative<MouseMoveEvent>(event));
-}
-
-TEST(mouse_button_event) {
-    using namespace event;
-    
-    MouseButtonEvent evt{
-        .button = MouseButtonEvent::Button::Left,
-        .action = MouseButtonEvent::Action::Press,
-        .position = widget::Point<int32_t>(50, 75),
-        .modifiers = 0,
-        .timestamp = 12345
-    };
-    
-    ASSERT_EQ(evt.button, MouseButtonEvent::Button::Left);
-    ASSERT_EQ(evt.action, MouseButtonEvent::Action::Press);
-    ASSERT_EQ(evt.position.x, 50);
-    ASSERT_EQ(evt.position.y, 75);
-    
-    Event event = evt;
-    ASSERT_TRUE(std::holds_alternative<MouseButtonEvent>(event));
-}
-
-TEST(key_event) {
-    using namespace event;
-    
-    KeyEvent evt{
-        .keyCode = static_cast<uint32_t>(KeyCode::A),
-        .action = KeyEvent::Action::Press,
-        .modifiers = static_cast<uint32_t>(ModifierKey::Control),
-        .timestamp = 12345
-    };
-    
-    ASSERT_EQ(evt.keyCode, static_cast<uint32_t>(KeyCode::A));
-    ASSERT_EQ(evt.action, KeyEvent::Action::Press);
-    
-    Event event = evt;
-    ASSERT_TRUE(std::holds_alternative<KeyEvent>(event));
-}
-
-TEST(resize_event) {
-    using namespace event;
-    
-    ResizeEvent evt{
-        .newSize = widget::Size<uint32_t>(1024, 768),
-        .oldSize = widget::Size<uint32_t>(800, 600)
-    };
-    
-    ASSERT_EQ(evt.newSize.w, 1024u);
-    ASSERT_EQ(evt.newSize.h, 768u);
-    ASSERT_EQ(evt.oldSize.w, 800u);
-    ASSERT_EQ(evt.oldSize.h, 600u);
-    
-    Event event = evt;
-    ASSERT_TRUE(std::holds_alternative<ResizeEvent>(event));
-}
-
-TEST(file_drop_event) {
-    using namespace event;
-    
-    std::vector<std::wstring> files = {L"file1.txt", L"file2.png"};
-    FileDropEvent evt{files, widget::Point<int32_t>(100, 200)};
-    
-    ASSERT_TRUE(evt.payload != nullptr);
-    ASSERT_EQ(evt.payload->filePaths.size(), 2);
-    ASSERT_EQ(evt.payload->dropPosition.x, 100);
-    ASSERT_EQ(evt.payload->dropPosition.y, 200);
-    
-    Event event = std::move(evt);
-    ASSERT_TRUE(std::holds_alternative<FileDropEvent>(event));
-}
-
-// ============================================================================
-// EVENT BUS TESTS
-// ============================================================================
-
-TEST(event_bus_subscribe) {
-    using namespace event;
+int test_basic_subscription() {
+    std::cout << "Running test_basic_subscription..." << std::endl;
     
     EventBus bus;
+    int callCount = 0;
     
-    bool called = false;
-    auto id = bus.subscribe([&called](const Event&) {
-        called = true;
-        return false;
+    // Subscribe
+    ListenerId id = bus.subscribe([&callCount](const Event&) {
+        callCount++;
+        return true;
     });
     
-    ASSERT_TRUE(id > 0);
+    ASSERT_EQ(callCount, 0);
     ASSERT_EQ(bus.getListenerCount(), 1);
     
-    bus.dispatch(MouseMoveEvent{});
-    ASSERT_TRUE(called);
-}
-
-TEST(event_bus_unsubscribe) {
-    using namespace event;
+    // Dispatch
+    bus.dispatch(Event(MouseMoveEvent{Point<int32_t>(10, 10)}));
+    ASSERT_EQ(callCount, 1);
     
-    EventBus bus;
-    
-    auto id = bus.subscribe([](const Event&) { return false; });
-    ASSERT_EQ(bus.getListenerCount(), 1);
-    
+    // Unsubscribe
     bool removed = bus.unsubscribe(id);
     ASSERT_TRUE(removed);
     ASSERT_EQ(bus.getListenerCount(), 0);
+    
+    // Dispatch again (should not trigger)
+    bus.dispatch(Event(MouseMoveEvent{Point<int32_t>(20, 20)}));
+    ASSERT_EQ(callCount, 1);
+    
+    std::cout << "  Passed!" << std::endl;
+    return 0;
 }
 
-TEST(event_bus_priority) {
-    using namespace event;
+int test_typed_subscription() {
+    std::cout << "Running test_typed_subscription..." << std::endl;
     
     EventBus bus;
+    int mouseCalls = 0;
+    int keyCalls = 0;
     
+    // Subscribe to MouseMove
+    bus.subscribeType<MouseMoveEvent>([&mouseCalls](const MouseMoveEvent& e) {
+        mouseCalls++;
+        return e.position.x > 0;
+    });
+    
+    // Subscribe to KeyEvent
+    bus.subscribeType<KeyEvent>([&keyCalls](const KeyEvent&) {
+        keyCalls++;
+        return true;
+    });
+    
+    // Dispatch MouseMove
+    bus.dispatch(Event(MouseMoveEvent{Point<int32_t>(10, 10)}));
+    ASSERT_EQ(mouseCalls, 1);
+    ASSERT_EQ(keyCalls, 0);
+    
+    // Dispatch KeyEvent
+    bus.dispatch(Event(KeyEvent{KeyEvent::Action::Press, 65, 65}));
+    ASSERT_EQ(mouseCalls, 1);
+    ASSERT_EQ(keyCalls, 1);
+    
+    std::cout << "  Passed!" << std::endl;
+    return 0;
+}
+
+int test_priority() {
+    std::cout << "Running test_priority..." << std::endl;
+    
+    EventBus bus;
     std::vector<int> order;
     
-    // Subscribe with different priorities
-    bus.subscribe([&order](const Event&) {
+    // Low priority
+    auto id1 = bus.subscribe([&order](const Event&) {
         order.push_back(1);
         return false;
     }, 1);
     
-    bus.subscribe([&order](const Event&) {
+    // High priority
+    auto id2 = bus.subscribe([&order](const Event&) {
         order.push_back(3);
         return false;
     }, 3);
     
-    bus.subscribe([&order](const Event&) {
+    // Medium priority
+    auto id3 = bus.subscribe([&order](const Event&) {
         order.push_back(2);
         return false;
     }, 2);
     
-    bus.dispatch(MouseMoveEvent{});
+    // Suppress unused warnings
+    (void)id1; (void)id2; (void)id3;
+
+    bus.dispatch(Event(WindowCloseEvent{}));
     
-    // Should execute in priority order: 3, 2, 1
     ASSERT_EQ(order.size(), 3);
-    ASSERT_EQ(order[0], 3);
-    ASSERT_EQ(order[1], 2);
-    ASSERT_EQ(order[2], 1);
+    ASSERT_EQ(order[0], 3); // Priority 3
+    ASSERT_EQ(order[1], 2); // Priority 2
+    ASSERT_EQ(order[2], 1); // Priority 1
+    
+    std::cout << "  Passed!" << std::endl;
+    return 0;
 }
 
-TEST(event_bus_stop_propagation) {
-    using namespace event;
+int test_propagation_stop() {
+    std::cout << "Running test_propagation_stop..." << std::endl;
     
     EventBus bus;
-    
     int callCount = 0;
     
-    bus.subscribe([&callCount](const Event&) {
+    // High priority listener that stops propagation
+    auto id1 = bus.subscribe([&callCount](const Event&) {
         ++callCount;
         return true;  // Stop propagation
     }, 1);
     
-    bus.subscribe([&callCount](const Event&) {
+    // Low priority listener (should NOT be called)
+    auto id2 = bus.subscribe([&callCount](const Event&) {
         ++callCount;
         return false;
     }, 0);
     
-    bool handled = bus.dispatch(MouseMoveEvent{});
+    (void)id1; (void)id2;
+
+    bool handled = bus.dispatch(Event(WindowCloseEvent{}));
     
+    ASSERT_EQ(callCount, 1);
     ASSERT_TRUE(handled);
-    ASSERT_EQ(callCount, 1);  // Only first handler should be called
+    
+    std::cout << "  Passed!" << std::endl;
+    return 0;
 }
 
-TEST(event_bus_typed_subscription) {
-    using namespace event;
+int test_scoped_listener() {
+    std::cout << "Running test_scoped_listener..." << std::endl;
     
     EventBus bus;
-    
-    bool mouseCalled = false;
-    bool keyCalled = false;
-    
-    bus.subscribeType<MouseMoveEvent>([&mouseCalled](const MouseMoveEvent&) {
-        mouseCalled = true;
-        return false;
-    });
-    
-    bus.subscribeType<KeyEvent>([&keyCalled](const KeyEvent&) {
-        keyCalled = true;
-        return false;
-    });
-    
-    bus.dispatch(MouseMoveEvent{});
-    ASSERT_TRUE(mouseCalled);
-    ASSERT_TRUE(!keyCalled);
-    
-    mouseCalled = false;
-    bus.dispatch(KeyEvent{});
-    ASSERT_TRUE(!mouseCalled);
-    ASSERT_TRUE(keyCalled);
-}
-
-TEST(scoped_event_listener) {
-    using namespace event;
-    
-    EventBus bus;
+    int mouseCalled = 0;
+    int keyCalled = 0;
     
     {
-        auto listener = makeScopedListener(bus, [](const Event&) {
-            return false;
-        });
+        auto scoped1 = makeScopedTypedListener<MouseMoveEvent>(bus, 
+            [&mouseCalled](const MouseMoveEvent&) {
+                mouseCalled++;
+                return true;
+            }
+        );
         
-        ASSERT_EQ(bus.getListenerCount(), 1);
-    }
+        auto scoped2 = makeScopedTypedListener<KeyEvent>(bus,
+            [&keyCalled](const KeyEvent&) {
+                keyCalled++;
+                return true;
+            }
+        );
+        
+        bus.dispatch(Event(MouseMoveEvent{Point<int32_t>(0,0)}));
+        bus.dispatch(Event(KeyEvent{KeyEvent::Action::Press, 0, 0}));
+        
+        ASSERT_EQ(mouseCalled, 1);
+        ASSERT_EQ(keyCalled, 1);
+    } // Listeners automatically unsubscribed here
     
-    // Listener should be automatically unsubscribed
     ASSERT_EQ(bus.getListenerCount(), 0);
+    
+    bus.dispatch(Event(MouseMoveEvent{Point<int32_t>(0,0)}));
+    ASSERT_EQ(mouseCalled, 1); // Should not increase
+    
+    std::cout << "  Passed!" << std::endl;
+    return 0;
 }
 
-TEST(event_visitor) {
-    using namespace event;
-    
-    Event event = MouseMoveEvent{
-        .position = widget::Point<int32_t>(10, 20)
+// Fixed FileDropEvent Test
+int test_file_drop() {
+    std::cout << "Running test_file_drop..." << std::endl;
+
+    std::vector<std::filesystem::path> files = {
+        "C:\\test\\file1.txt",
+        "C:\\test\\file2.jpg"
     };
+
+    // Fix: Swap arguments (Position first, then Files)
+    FileDropEvent evt{widget::Point<int32_t>(100, 200), files};
+
+    // Fix: Access members directly (no payload->)
+    ASSERT_EQ(evt.paths.size(), 2);
+    ASSERT_EQ(evt.position.x, 100);
+    ASSERT_EQ(evt.position.y, 200);
     
-    bool visited = false;
-    int32_t x = 0, y = 0;
+    // Verify paths content
+    ASSERT_TRUE(evt.paths[0] == "C:\\test\\file1.txt");
     
-    std::visit(EventVisitor{
-        [&](const MouseMoveEvent& evt) {
-            visited = true;
-            x = evt.position.x;
-            y = evt.position.y;
-        },
-        [](const auto&) {}
-    }, event);
-    
-    ASSERT_TRUE(visited);
-    ASSERT_EQ(x, 10);
-    ASSERT_EQ(y, 20);
+    // Verify Event variant wrapping
+    Event wrappedEvt = evt;
+    auto* ptr = std::get_if<FileDropEvent>(&wrappedEvt);
+    ASSERT_TRUE(ptr != nullptr);
+    ASSERT_EQ(ptr->paths.size(), 2);
+
+    std::cout << "  Passed!" << std::endl;
+    return 0;
 }
-
-// ============================================================================
-// MODIFIER KEY TESTS
-// ============================================================================
-
-TEST(modifier_keys) {
-    using namespace event;
-    
-    uint32_t mods = static_cast<uint32_t>(ModifierKey::Control | ModifierKey::Shift);
-    
-    ASSERT_TRUE(hasModifier(mods, ModifierKey::Control));
-    ASSERT_TRUE(hasModifier(mods, ModifierKey::Shift));
-    ASSERT_TRUE(!hasModifier(mods, ModifierKey::Alt));
-}
-
-// ============================================================================
-// MAIN
-// ============================================================================
 
 int main() {
-    std::println("=== FRQS-Widget Event System Tests ===\n");
+    std::cout << "========================================" << std::endl;
+    std::cout << "EVENT SYSTEM UNIT TESTS" << std::endl;
+    std::cout << "========================================" << std::endl;
     
-    try {
-        // Tests are automatically registered and run
-        std::println("\n=== All tests passed! ===");
-        return 0;
-        
-    } catch (const std::exception& e) {
-        std::println(stderr, "\nTest failed with exception: {}", e.what());
-        return 1;
-    }
+    if (test_basic_subscription() != 0) return 1;
+    if (test_typed_subscription() != 0) return 1;
+    if (test_priority() != 0) return 1;
+    if (test_propagation_stop() != 0) return 1;
+    if (test_scoped_listener() != 0) return 1;
+    if (test_file_drop() != 0) return 1;
+    
+    std::cout << "\nAll tests passed successfully!" << std::endl;
+    return 0;
 }

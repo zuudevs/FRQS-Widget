@@ -79,7 +79,7 @@ set(HEADERS_PUBLIC
     # Platform
     include/platform/win32_safe.hpp
     include/platform/message_queue.hpp
-    
+  
     # Core
     include/core/application.hpp
     include/core/window.hpp
@@ -113,6 +113,7 @@ set(HEADERS_PUBLIC
     include/render/dirty_rect.hpp
     include/render/renderer.hpp
     include/render/render_context.hpp
+    include/render/resource_cache.hpp # ✅ ADDED: Resource Cache Header
 )
 
 # ============================================================================
@@ -154,6 +155,7 @@ set(SOURCES_IMPL
     # Render
     src/render/renderer_d2d.cpp
     src/render/dirty_rect.cpp
+    src/render/resource_cache.cpp # ✅ ADDED: Resource Cache Implementation
     
     # Platform
     src/platform/win32_window.cpp
@@ -189,6 +191,7 @@ if(WIN32)
             d2d1        # Direct2D
             dwrite      # DirectWrite
             dwmapi      # Desktop Window Manager API (for invisible borders)
+            shell32     # ✅ ADDED: Shell32 for Drag & Drop (DragQueryFileW)
     )
     
     # Define WIN32_LEAN_AND_MEAN and NOMINMAX
@@ -225,6 +228,7 @@ if(WIN32)
             d2d1
             dwrite
             dwmapi
+            shell32     # ✅ ADDED: Shell32 for Drag & Drop
     )
     
     target_compile_definitions(FRQS_WIDGET_LIB
@@ -318,7 +322,7 @@ if(BUILD_EXAMPLES)
     
     target_link_libraries(window_demo
         PRIVATE
-            FRQS_WIDGET_LIB
+        FRQS_WIDGET_LIB
     )
     
     target_include_directories(window_demo
@@ -432,7 +436,7 @@ if(BUILD_EXAMPLES)
     
     target_link_libraries(combobox_demo
         PRIVATE
-            FRQS_WIDGET_LIB
+        FRQS_WIDGET_LIB
     )
     
     target_include_directories(combobox_demo

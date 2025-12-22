@@ -39,8 +39,8 @@ public:
     // Non-copyable, movable
     EventBus(const EventBus&) = delete;
     EventBus& operator=(const EventBus&) = delete;
-    EventBus(EventBus&&) noexcept = default;
-    EventBus& operator=(EventBus&&) noexcept = default;
+    EventBus(EventBus&&) noexcept = delete;
+    EventBus& operator=(EventBus&&) noexcept = delete;
 
     // ========================================================================
     // SUBSCRIBE TO EVENTS
