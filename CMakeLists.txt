@@ -8,507 +8,155 @@ project(
 )
 
 # ============================================================================
-# OUTPUT DIRECTORIES (Menyimpan exe/pdb di folder 'bin' utama)
+# OUTPUT & DIRECTORIES
 # ============================================================================
-# Tentukan folder output relatif terhadap folder project utama (bukan build)
 set(OUTPUT_DIR ${CMAKE_SOURCE_DIR}/bin)
 set(LIB_OUTPUT_DIR ${CMAKE_SOURCE_DIR}/lib)
 
-# Set global output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${OUTPUT_DIR})
 set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${OUTPUT_DIR})
 set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${LIB_OUTPUT_DIR})
 set(CMAKE_PDB_OUTPUT_DIRECTORY ${OUTPUT_DIR})
 
-# Untuk Visual Studio (Multi-Config), kita paksa agar tidak membuat subfolder 
-# Debug/Release yang membingungkan, atau biarkan default (bin/Debug).
-# Di sini aku set base-nya saja, biasanya VS akan tetap membuat bin/Debug atau bin/Release.
-# Tapi setidaknya sudah keluar dari folder 'build'.
-
 # ============================================================================
-# C++ STANDARD
+# C++ STANDARD & FLAGS
 # ============================================================================
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-# ============================================================================
-# COMPILER FLAGS
-# ============================================================================
 if(MSVC)
-    add_compile_options(
-        /W4                 # Warning level 4
-        /permissive-        # Standards conformance
-        /Zc:__cplusplus     # Correct __cplusplus macro
-        /std:c++latest      # Latest C++ standard
-        /EHsc               # Exception handling
-        /utf-8              # UTF-8 source and execution
-    )
-    
-    # Optional: Enable faster builds
-    add_compile_options(/MP)  # Multi-processor compilation
-    
+    add_compile_options(/W4 /permissive- /Zc:__cplusplus /std:c++latest /EHsc /utf-8 /MP)
 else()
-   
-    add_compile_options(
-        -Wall
-        -Wextra
-        -Wpedantic
-        -std=c++23
-    )
+    add_compile_options(-Wall -Wextra -Wpedantic -std=c++23)
 endif()
 
 # ============================================================================
-# HEADER FILES
+# FILE SOURCES
 # ============================================================================
+# Globbing is generally discouraged, but for conciseness in this specific context:
+file(GLOB_RECURSE HEADERS_PUBLIC "include/*.hpp")
+file(GLOB_RECURSE HEADERS_PRIVATE "src/*.hpp")
+file(GLOB_RECURSE SOURCES_IMPL "src/*.cpp")
 
-set(HEADERS_PUBLIC
-    # Main header
-    include/frqs-widget.hpp
-    
-    # Meta
-    include/meta/concepts.hpp
-    
-    # Units (existing)
-    include/unit/point.hpp
-    include/unit/size.hpp
-    include/unit/rect.hpp
-    include/unit/color.hpp
-    include/unit/ipair.hpp
-    
-    # Platform
-    include/platform/win32_safe.hpp
-    include/platform/message_queue.hpp
-  
-    # Core
-    include/core/application.hpp
-    include/core/window.hpp
-    include/core/window_id.hpp
-    include/core/window_registry.hpp
-    include/core/native_handle.hpp
-    
-    # Event
-    include/event/event.hpp
-    include/event/event_types.hpp
-    include/event/event_bus.hpp
-    
-    # Widget
-	include/widget/button.hpp
-	include/widget/checkbox.hpp
-	include/widget/combobox.hpp
-	include/widget/container.hpp
-	include/widget/image.hpp
-	include/widget/internal.hpp
-    include/widget/iwidget.hpp
-	include/widget/label.hpp
-    include/widget/layout.hpp
-	include/widget/list_adapter.hpp
-	include/widget/list_view.hpp
-	include/widget/scroll_view.hpp
-    include/widget/slider.hpp
-    include/widget/text_input.hpp
-	include/widget/widget.hpp
-    
-    # Render
-    include/render/dirty_rect.hpp
-    include/render/renderer.hpp
-    include/render/render_context.hpp
-    include/render/resource_cache.hpp # ✅ ADDED: Resource Cache Header
-)
+# Remove main.cpp from library sources to avoid entry point conflicts
+list(FILTER SOURCES_IMPL EXCLUDE REGEX ".*src/main.cpp$")
 
 # ============================================================================
-# PRIVATE HEADERS (Implementation details)
+# MAIN TARGETS
 # ============================================================================
 
-set(HEADERS_PRIVATE
-    src/core/window_impl.hpp
-    src/render/renderer_d2d.hpp
-)
+# 1. Main Executable
+add_executable(FRQS_WIDGET src/main.cpp ${HEADERS_PUBLIC} ${HEADERS_PRIVATE} ${SOURCES_IMPL})
 
-# ============================================================================
-# SOURCE FILES (Implemented)
-# ============================================================================
+# 2. Static Library
+add_library(FRQS_WIDGET_LIB STATIC ${HEADERS_PUBLIC} ${HEADERS_PRIVATE} ${SOURCES_IMPL})
 
-set(SOURCES_IMPL
-    # Core
-    src/core/application.cpp
-    src/core/window.cpp
-    src/core/window_registry.cpp
-
-    # Event
-    src/event/event_bus.cpp
-    src/event/event_dispatcher.cpp
-    
-    # Widget
-	src/widget/button.cpp
-	src/widget/checkbox.cpp
-	src/widget/combobox.cpp
-	src/widget/container.cpp
-	src/widget/image.cpp
-	src/widget/label.cpp
-	src/widget/list_view.cpp
-	src/widget/scroll_view.cpp
-    src/widget/slider.cpp
-    src/widget/text_input.cpp
-	src/widget/widget.cpp
-    
-    # Render
-    src/render/renderer_d2d.cpp
-    src/render/dirty_rect.cpp
-    src/render/resource_cache.cpp # ✅ ADDED: Resource Cache Implementation
-    
-    # Platform
-    src/platform/win32_window.cpp
-    src/platform/message_queue.cpp
-)
-
-# ============================================================================
-# MAIN EXECUTABLE
-# ============================================================================
-
-add_executable(FRQS_WIDGET
-    src/main.cpp
-    ${HEADERS_PUBLIC}
-    ${HEADERS_PRIVATE}
-    ${SOURCES_IMPL}
-)
-
-target_include_directories(FRQS_WIDGET
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-)
-
-# ============================================================================
-# WINDOWS LIBRARIES
-# ============================================================================
-
-if(WIN32)
-    target_link_libraries(FRQS_WIDGET
-        PRIVATE
-            d2d1        # Direct2D
-            dwrite      # DirectWrite
-            dwmapi      # Desktop Window Manager API (for invisible borders)
-            shell32     # ✅ ADDED: Shell32 for Drag & Drop (DragQueryFileW)
-			windowscodecs # ✅ ADDED: Windows Imaging Component (WIC) for image loading
-    )
-    
-    # Define WIN32_LEAN_AND_MEAN and NOMINMAX
-    target_compile_definitions(FRQS_WIDGET
-        PRIVATE
-            WIN32_LEAN_AND_MEAN
-            NOMINMAX
-            UNICODE
-            _UNICODE
-    )
-endif()
-
-# ============================================================================
-# STATIC LIBRARY (Optional)
-# ============================================================================
-
-add_library(FRQS_WIDGET_LIB STATIC
-    ${HEADERS_PUBLIC}
-    ${HEADERS_PRIVATE}
-    ${SOURCES_IMPL}
-)
-
-target_include_directories(FRQS_WIDGET_LIB
-    PUBLIC
-        $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
-        $<INSTALL_INTERFACE:include>
-    PRIVATE
-        ${CMAKE_SOURCE_DIR}/src
-)
-
-if(WIN32)
-    target_link_libraries(FRQS_WIDGET_LIB
+# Common Configuration Macro
+macro(configure_frqs_target target_name visibility)
+    target_include_directories(${target_name}
         PUBLIC
-            d2d1
-            dwrite
-            dwmapi
-            shell32     # ✅ ADDED: Shell32 for Drag & Drop
+            $<BUILD_INTERFACE:${CMAKE_SOURCE_DIR}/include>
+            $<INSTALL_INTERFACE:include>
+        PRIVATE
+            ${CMAKE_SOURCE_DIR}/src
     )
-    
-    target_compile_definitions(FRQS_WIDGET_LIB
-        PUBLIC
-            WIN32_LEAN_AND_MEAN
-            NOMINMAX
-            UNICODE
-            _UNICODE
-    )
-endif()
+
+    if(WIN32)
+        target_link_libraries(${target_name} ${visibility}
+            d2d1 dwrite dwmapi shell32 windowscodecs
+        )
+        target_compile_definitions(${target_name} ${visibility}
+            WIN32_LEAN_AND_MEAN NOMINMAX UNICODE _UNICODE
+        )
+    endif()
+endmacro()
+
+# Apply Config
+configure_frqs_target(FRQS_WIDGET PRIVATE)
+configure_frqs_target(FRQS_WIDGET_LIB PUBLIC)
 
 # ============================================================================
-# TESTS (Optional)
+# MACROS FOR TESTS & EXAMPLES (The Shortening Magic)
 # ============================================================================
 
+macro(create_frqs_test name source_file)
+    add_executable(${name} ${source_file})
+    target_link_libraries(${name} PRIVATE FRQS_WIDGET_LIB)
+    target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    # Add to IDE filter
+    if(MSVC)
+        source_group("Tests" FILES ${source_file})
+    endif()
+endmacro()
+
+macro(create_frqs_example name source_file)
+    add_executable(${name} ${source_file})
+    target_link_libraries(${name} PRIVATE FRQS_WIDGET_LIB)
+    target_include_directories(${name} PRIVATE ${CMAKE_SOURCE_DIR}/include)
+    # Add to IDE filter
+    if(MSVC)
+        source_group("Examples" FILES ${source_file})
+    endif()
+endmacro()
+
+# ============================================================================
+# BUILD TESTS
+# ============================================================================
 option(BUILD_TESTS "Build test executables" ON)
 
 if(BUILD_TESTS)
-    # Unit test for basic types (Point, Size, Rect)
-    add_executable(unit_tests
-        tests/unit_test.cpp
-    )
-    
-    target_link_libraries(unit_tests
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(unit_tests
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-    
-    # Window system test
-    add_executable(window_test
-        tests/window_test.cpp
-    )
-    
-    target_link_libraries(window_test
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(window_test
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-    
-    # Event system test
-    add_executable(event_test
-        tests/event_test.cpp
-    )
-    
-    target_link_libraries(event_test
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(event_test
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-    # Flex Layout test
-    add_executable(flex_layout_test
-        tests/flex_layout_test.cpp
-    )
-    
-    target_link_libraries(flex_layout_test
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(flex_layout_test
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
+    create_frqs_test(unit_tests         tests/unit_test.cpp)
+    create_frqs_test(window_test        tests/window_test.cpp)
+    create_frqs_test(event_test         tests/event_test.cpp)
+    create_frqs_test(flex_layout_test   tests/flex_layout_test.cpp)
 endif()
 
 # ============================================================================
-# EXAMPLES
+# BUILD EXAMPLES
 # ============================================================================
-
 option(BUILD_EXAMPLES "Build example executables" ON)
 
 if(BUILD_EXAMPLES)
-    # Hello Window Example
-    add_executable(window_demo
-        examples/window_demo.cpp
-    )
-    
-    target_link_libraries(window_demo
-        PRIVATE
-        FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(window_demo
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-	add_executable(filedrop_demo
-        examples/filedrop_demo.cpp
-    )
-    
-    target_link_libraries(filedrop_demo
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(filedrop_demo
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-    add_executable(widget_demo
-        examples/widget_demo.cpp
-    )
-    
-    target_link_libraries(widget_demo
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(widget_demo
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-    add_executable(flex_layout
-        examples/flex_layout_demo.cpp
-    )
-    
-    target_link_libraries(flex_layout
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(flex_layout
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-    # Scroll Demo
-    add_executable(scrollview_demo
-        examples/scrollview_demo.cpp
-    )
-
-    target_link_libraries(scrollview_demo
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-
-    target_include_directories(scrollview_demo
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-	add_executable(image_and_checkbox_demo
-        examples/image_and_checkbox_demo.cpp
-    )
-
-    target_link_libraries(image_and_checkbox_demo
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-
-    target_include_directories(image_and_checkbox_demo
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-	add_executable(checkbox_demo
-        examples/checkbox_demo.cpp
-    )
-
-    target_link_libraries(checkbox_demo
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-
-    target_include_directories(checkbox_demo
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-	add_executable(virtual_list_demo
-        examples/virtual_list_demo.cpp
-    )
-
-    target_link_libraries(virtual_list_demo
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-
-    target_include_directories(virtual_list_demo
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-	# ComboBox Demo
-    add_executable(combobox_demo
-        examples/combobox_demo.cpp
-    )
-    
-    target_link_libraries(combobox_demo
-        PRIVATE
-        FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(combobox_demo
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
-
-	# ComboBox Demo
-    add_executable(kitchen_sink_demo
-        examples/kitchen_sink_demo.cpp
-    )
-    
-    target_link_libraries(kitchen_sink_demo
-        PRIVATE
-            FRQS_WIDGET_LIB
-    )
-    
-    target_include_directories(kitchen_sink_demo
-        PRIVATE
-            ${CMAKE_SOURCE_DIR}/include
-    )
+    create_frqs_example(window_demo             examples/window_demo.cpp)
+    create_frqs_example(filedrop_demo           examples/filedrop_demo.cpp)
+    create_frqs_example(widget_demo             examples/widget_demo.cpp)
+    create_frqs_example(flex_layout             examples/flex_layout_demo.cpp)
+    create_frqs_example(scrollview_demo         examples/scrollview_demo.cpp)
+    create_frqs_example(image_and_checkbox_demo examples/image_and_checkbox_demo.cpp)
+    create_frqs_example(checkbox_demo           examples/checkbox_demo.cpp)
+    create_frqs_example(virtual_list_demo       examples/virtual_list_demo.cpp)
+    create_frqs_example(combobox_demo           examples/combobox_demo.cpp)
+    create_frqs_example(kitchen_sink_demo       examples/kitchen_sink_demo.cpp)
+	create_frqs_example(button_demo       		examples/button_demo.cpp)
+	create_frqs_example(layout_demo       		examples/layout_demo.cpp)
+	create_frqs_example(dashboard_demo       	examples/dashboard_demo.cpp)
+	create_frqs_example(setting_demo       		examples/setting_demo.cpp)
 endif()
 
+# IDE SUPPORT & INSTALL
 # ============================================================================
-# IDE SUPPORT (Visual Studio filters)
-# ============================================================================
-
 if(MSVC)
-    # Public headers
-    source_group(TREE ${CMAKE_SOURCE_DIR}/include 
-                 PREFIX "Header Files/Public" 
-                 FILES ${HEADERS_PUBLIC})
-    
-    # Private headers
-    source_group(TREE ${CMAKE_SOURCE_DIR}/src 
-                 PREFIX "Header Files/Private" 
-                 FILES ${HEADERS_PRIVATE})
-    
-    # Source files
-    source_group(TREE ${CMAKE_SOURCE_DIR}/src 
-                 PREFIX "Source Files" 
-                 FILES ${SOURCES_IMPL})
+    source_group(TREE ${CMAKE_SOURCE_DIR}/include PREFIX "Header Files/Public" FILES ${HEADERS_PUBLIC})
+    source_group(TREE ${CMAKE_SOURCE_DIR}/src PREFIX "Header Files/Private" FILES ${HEADERS_PRIVATE})
+    source_group(TREE ${CMAKE_SOURCE_DIR}/src PREFIX "Source Files" FILES ${SOURCES_IMPL})
 endif()
-
-# ============================================================================
-# INSTALLATION (Optional)
-# ============================================================================
 
 install(TARGETS FRQS_WIDGET FRQS_WIDGET_LIB
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
 )
-
-install(DIRECTORY include/
-    DESTINATION include
-    FILES_MATCHING PATTERN "*.hpp"
-)
+install(DIRECTORY include/ DESTINATION include FILES_MATCHING PATTERN "*.hpp")
 
 # ============================================================================
-# BUILD SUMMARY
+# SUMMARY
 # ============================================================================
-
-message(STATUS "========================================")
-message(STATUS "FRQS-Widget Configuration Summary")
-message(STATUS "========================================")
-message(STATUS "Version: ${PROJECT_VERSION}")
-message(STATUS "C++ Standard: C++${CMAKE_CXX_STANDARD}")
-message(STATUS "Compiler: ${CMAKE_CXX_COMPILER_ID}")
-message(STATUS "Build Type: ${CMAKE_BUILD_TYPE}")
-message(STATUS "Output Directory: ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
-message(STATUS "Build Tests: ${BUILD_TESTS}")
-message(STATUS "Build Examples: ${BUILD_EXAMPLES}")
-message(STATUS "========================================")
+message(STATUS "------------------------------------------------")
+message(STATUS "  FRQS-WIDGET CONFIGURATION (v${PROJECT_VERSION})")
+message(STATUS "------------------------------------------------")
+message(STATUS "  C++ Standard : ${CMAKE_CXX_STANDARD}")
+message(STATUS "  Output Dir   : ${CMAKE_RUNTIME_OUTPUT_DIRECTORY}")
+message(STATUS "  Tests        : ${BUILD_TESTS}")
+message(STATUS "  Examples     : ${BUILD_EXAMPLES}")
+message(STATUS "------------------------------------------------")
