@@ -9,24 +9,18 @@
 #include "render/renderer.hpp"
 #include <mutex>
 
-namespace frqs::render {
+// [FIX] Forward declaration for WIC Factory interface
+struct IWICImagingFactory;
 
-// ============================================================================
-// COLOR KEY (for brush cache)
-// ============================================================================
+namespace frqs::render {
 
 struct ColorKey {
     widget::Color color;
-    
     explicit ColorKey(const widget::Color& c) : color(c) {}
-    
     bool operator==(const ColorKey& other) const noexcept {
-        return color.r == other.color.r &&
-               color.g == other.color.g &&
-               color.b == other.color.b &&
-               color.a == other.color.a;
+        return color.r == other.color.r && color.g == other.color.g &&
+               color.b == other.color.b && color.a == other.color.a;
     }
-    
     bool operator<(const ColorKey& other) const noexcept {
         if (color.r != other.color.r) return color.r < other.color.r;
         if (color.g != other.color.g) return color.g < other.color.g;
@@ -36,10 +30,6 @@ struct ColorKey {
 };
 
 } // namespace frqs::render
-
-// ============================================================================
-// HASH SPECIALIZATION for FontStyle
-// ============================================================================
 
 namespace std {
     template<>
@@ -51,7 +41,6 @@ namespace std {
             size_t h4 = hash<bool>{}(fs.italic);
             size_t h5 = hash<bool>{}(fs.underline);
             size_t h6 = hash<bool>{}(fs.strikethrough);
-            
             return h1 ^ (h2 << 1) ^ (h3 << 2) ^ (h4 << 3) ^ (h5 << 4) ^ (h6 << 5);
         }
     };
@@ -59,15 +48,14 @@ namespace std {
 
 namespace frqs::render {
 
-// ============================================================================
-// RESOURCE CACHE (Singleton)
-// ============================================================================
-
 class ResourceCache {
 private:
     mutable std::mutex mutex_;
     
     IDWriteFactory* writeFactory_ = nullptr;
+    
+    // [FIX] Added WIC Factory member
+    IWICImagingFactory* wicFactory_ = nullptr;
     
     std::unordered_map<FontStyle, IDWriteTextFormat*> fontCache_;
     std::map<ColorKey, ID2D1SolidColorBrush*> brushCache_;
@@ -85,39 +73,29 @@ private:
 public:
     ~ResourceCache() noexcept;
     
-    // Singleton access
     static ResourceCache& instance() noexcept {
         static ResourceCache cache;
         return cache;
     }
     
-    // Non-copyable, non-movable
     ResourceCache(const ResourceCache&) = delete;
     ResourceCache& operator=(const ResourceCache&) = delete;
     ResourceCache(ResourceCache&&) = delete;
     ResourceCache& operator=(ResourceCache&&) = delete;
     
-    // Font management
     IDWriteTextFormat* getFont(const FontStyle& style);
-    
-    // Brush management
     ID2D1SolidColorBrush* getBrush(const widget::Color& color, ID2D1RenderTarget* target = nullptr);
-
 	ID2D1Bitmap* getBitmap(std::wstring_view path, ID2D1RenderTarget* target);
     
-    // Render target management
     void setRenderTarget(ID2D1RenderTarget* target) noexcept {
         currentRenderTarget_ = target;
     }
     
-    // Cache management
     void clearBrushCache();
     void clearFontCache();
     void clearAll();
-
 	void releaseBitmap(std::wstring_view path);
     
-    // DirectWrite factory access
     IDWriteFactory* getWriteFactory() const noexcept {
         return writeFactory_;
     }

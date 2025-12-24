@@ -1,6 +1,9 @@
 // src/render/resource_cache.cpp
 #include "render/resource_cache.hpp"
 #include <stdexcept>
+#include <wincodec.h>
+
+#pragma comment(lib, "windowscodecs.lib")
 
 namespace frqs::render {
 
@@ -31,6 +34,12 @@ ResourceCache::~ResourceCache() noexcept {
         writeFactory_->Release();
         writeFactory_ = nullptr;
     }
+
+    // [FIX] Release WIC Factory
+    if (wicFactory_) {
+        wicFactory_->Release();
+        wicFactory_ = nullptr;
+    }
 }
 
 // ============================================================================
@@ -40,7 +49,6 @@ ResourceCache::~ResourceCache() noexcept {
 IDWriteTextFormat* ResourceCache::getFont(const FontStyle& style) {
     std::lock_guard<std::mutex> lock(mutex_);
     
-    // Check cache
     auto it = fontCache_.find(style);
     if (it != fontCache_.end()) {
         return it->second;
@@ -50,17 +58,16 @@ IDWriteTextFormat* ResourceCache::getFont(const FontStyle& style) {
         return nullptr;
     }
     
-    // Create new text format
     IDWriteTextFormat* textFormat = nullptr;
     
     HRESULT hr = writeFactory_->CreateTextFormat(
         style.family.c_str(),
-        nullptr,  // Font collection (NULL = system)
+        nullptr,
         style.bold ? DWRITE_FONT_WEIGHT_BOLD : DWRITE_FONT_WEIGHT_NORMAL,
         style.italic ? DWRITE_FONT_STYLE_ITALIC : DWRITE_FONT_STYLE_NORMAL,
         DWRITE_FONT_STRETCH_NORMAL,
         style.size,
-        L"en-us",  // Locale
+        L"en-us",
         &textFormat
     );
     
@@ -68,7 +75,6 @@ IDWriteTextFormat* ResourceCache::getFont(const FontStyle& style) {
         return nullptr;
     }
     
-    // Cache and return
     fontCache_[style] = textFormat;
     
     return textFormat;
@@ -94,13 +100,11 @@ ID2D1SolidColorBrush* ResourceCache::getBrush(
     
     ColorKey key(color);
     
-    // Check cache
     auto it = brushCache_.find(key);
     if (it != brushCache_.end()) {
         return it->second;
     }
     
-    // Create new brush
     ID2D1SolidColorBrush* brush = nullptr;
     
     D2D1_COLOR_F d2dColor = D2D1::ColorF(
@@ -116,11 +120,14 @@ ID2D1SolidColorBrush* ResourceCache::getBrush(
         return nullptr;
     }
     
-    // Cache and return
     brushCache_[key] = brush;
     
     return brush;
 }
+
+// ============================================================================
+// GET BITMAP (WIC)
+// ============================================================================
 
 ID2D1Bitmap* ResourceCache::getBitmap(
     std::wstring_view path, 
@@ -136,24 +143,20 @@ ID2D1Bitmap* ResourceCache::getBitmap(
     
     std::lock_guard<std::mutex> lock(mutex_);
     
-    std::wstring pathKey(path);  // Convert view to key
+    std::wstring pathKey(path);
     
-    // ✅ CRITICAL: Check cache first
     auto it = bitmapCache_.find(pathKey);
     if (it != bitmapCache_.end()) {
-        // Increment reference count
         bitmapRefCount_[pathKey]++;
         return it->second;
     }
     
-    // ✅ Cache miss: Load from disk using WIC
     ID2D1Bitmap* bitmap = loadBitmapFromWIC(path, target);
     
     if (!bitmap) {
         return nullptr;
     }
     
-    // ✅ Store in cache
     bitmapCache_[pathKey] = bitmap;
     bitmapRefCount_[pathKey] = 1;
     
@@ -167,13 +170,11 @@ void ResourceCache::releaseBitmap(std::wstring_view path) {
     
     auto refIt = bitmapRefCount_.find(pathKey);
     if (refIt == bitmapRefCount_.end()) {
-        return;  // Not in cache
+        return;
     }
     
-    // Decrement refcount
     refIt->second--;
     
-    // ✅ CRITICAL: Only release when refcount hits zero
     if (refIt->second == 0) {
         auto bitmapIt = bitmapCache_.find(pathKey);
         if (bitmapIt != bitmapCache_.end()) {
@@ -190,8 +191,8 @@ ID2D1Bitmap* ResourceCache::loadBitmapFromWIC(
     std::wstring_view path,
     ID2D1RenderTarget* target
 ) {
+    // [FIX] Initialize WIC Factory if null
     if (!wicFactory_) {
-        // Lazy initialize WIC factory
         HRESULT hr = CoCreateInstance(
             CLSID_WICImagingFactory,
             nullptr,
@@ -209,7 +210,7 @@ ID2D1Bitmap* ResourceCache::loadBitmapFromWIC(
     IWICFormatConverter* converter = nullptr;
     ID2D1Bitmap* bitmap = nullptr;
     
-    std::wstring pathStr(path);  // Convert to std::wstring for API
+    std::wstring pathStr(path);
     
     HRESULT hr = wicFactory_->CreateDecoderFromFilename(
         pathStr.c_str(),
@@ -247,37 +248,27 @@ cleanup_loadBitmap:
     return bitmap;
 }
 
-// ============================================================================
-// CLEAR CACHES
-// ============================================================================
-
 void ResourceCache::clearBrushCache() {
     std::lock_guard<std::mutex> lock(mutex_);
-    
     for (auto& [key, brush] : brushCache_) {
-        if (brush) {
-            brush->Release();
-        }
+        if (brush) brush->Release();
     }
-    
     brushCache_.clear();
 }
 
 void ResourceCache::clearFontCache() {
     std::lock_guard<std::mutex> lock(mutex_);
-    
     for (auto& [style, format] : fontCache_) {
-        if (format) {
-            format->Release();
-        }
+        if (format) format->Release();
     }
-    
     fontCache_.clear();
 }
 
 void ResourceCache::clearAll() {
     clearBrushCache();
     clearFontCache();
+    // Bitmap cache should be cleared manually or via refcounts, 
+    // but strictly speaking clearAll could nuke them too if we wanted forced cleanup.
 }
 
 } // namespace frqs::render
