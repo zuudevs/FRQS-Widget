@@ -192,6 +192,7 @@ if(WIN32)
             dwrite      # DirectWrite
             dwmapi      # Desktop Window Manager API (for invisible borders)
             shell32     # ✅ ADDED: Shell32 for Drag & Drop (DragQueryFileW)
+			windowscodecs # ✅ ADDED: Windows Imaging Component (WIC) for image loading
     )
     
     # Define WIN32_LEAN_AND_MEAN and NOMINMAX
