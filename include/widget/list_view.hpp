@@ -9,6 +9,57 @@
 
 namespace frqs::widget {
 
+// src/widget/list_view.cpp (Conceptual - already partially implemented)
+struct PooledWidget {
+    std::shared_ptr<IWidget> widget;
+    size_t boundIndex = size_t(-1);  // -1 = available for reuse
+};
+
+std::vector<PooledWidget> widgetPool_;
+
+IWidget* getPooledWidget(size_t index) {
+    // 1. Check for existing binding (already in use)
+    for (auto& p : widgetPool_) {
+        if (p.boundIndex == index) return p.widget.get();
+    }
+    
+    // 2. ✅ CRITICAL: Reuse unbound widget (TRUE RECYCLING)
+    for (auto& p : widgetPool_) {
+        if (p.boundIndex == size_t(-1)) {
+            p.boundIndex = index;  // Claim it
+            return p.widget.get();
+        }
+    }
+    
+    // 3. Only create if pool exhausted
+    auto newWidget = adapter_->createView(index);
+    widgetPool_.push_back({newWidget, index});
+    addChild(newWidget);  // Add to widget tree
+    return newWidget.get();
+}
+
+void updateWidgetPool() {
+    // Mark all as unbound
+    for (auto& p : widgetPool_) {
+        p.boundIndex = size_t(-1);
+    }
+    
+    // Rebind visible widgets
+    for (size_t i = firstVisibleIndex_; i < lastVisibleIndex_; ++i) {
+        IWidget* widget = getPooledWidget(i);  // Recycles from pool!
+        adapter_->updateView(i, widget);
+        widget->setVisible(true);
+        // ... position widget ...
+    }
+    
+    // Hide unused (but keep in pool for next frame!)
+    for (auto& p : widgetPool_) {
+        if (p.boundIndex == size_t(-1)) {
+            p.widget->setVisible(false);
+        }
+    }
+}
+
 // ============================================================================
 // LIST VIEW (Virtual Scrolling List)
 // ============================================================================

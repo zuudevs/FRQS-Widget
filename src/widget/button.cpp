@@ -47,7 +47,7 @@ Button::Button(const std::wstring& text)
 
 Button::~Button() = default;
 
-void Button::setText(const std::wstring& text) {
+void Button::setText(std::wstring_view text) {
     if (text_ == text) return;
     text_ = text;
     invalidate();

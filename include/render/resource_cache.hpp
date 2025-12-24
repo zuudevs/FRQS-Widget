@@ -71,10 +71,16 @@ private:
     
     std::unordered_map<FontStyle, IDWriteTextFormat*> fontCache_;
     std::map<ColorKey, ID2D1SolidColorBrush*> brushCache_;
+	std::unordered_map<std::wstring, ID2D1Bitmap*> bitmapCache_;
+    std::unordered_map<std::wstring, size_t> bitmapRefCount_;
     
     ID2D1RenderTarget* currentRenderTarget_ = nullptr;
     
     ResourceCache();
+	ID2D1Bitmap* loadBitmapFromWIC(
+		std::wstring_view path,
+		ID2D1RenderTarget* target
+	);
     
 public:
     ~ResourceCache() noexcept;
@@ -96,6 +102,8 @@ public:
     
     // Brush management
     ID2D1SolidColorBrush* getBrush(const widget::Color& color, ID2D1RenderTarget* target = nullptr);
+
+	ID2D1Bitmap* getBitmap(std::wstring_view path, ID2D1RenderTarget* target);
     
     // Render target management
     void setRenderTarget(ID2D1RenderTarget* target) noexcept {
@@ -106,6 +114,8 @@ public:
     void clearBrushCache();
     void clearFontCache();
     void clearAll();
+
+	void releaseBitmap(std::wstring_view path);
     
     // DirectWrite factory access
     IDWriteFactory* getWriteFactory() const noexcept {

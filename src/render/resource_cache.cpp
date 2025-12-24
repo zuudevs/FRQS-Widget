@@ -122,6 +122,131 @@ ID2D1SolidColorBrush* ResourceCache::getBrush(
     return brush;
 }
 
+ID2D1Bitmap* ResourceCache::getBitmap(
+    std::wstring_view path, 
+    ID2D1RenderTarget* target
+) {
+    if (!target) {
+        target = currentRenderTarget_;
+    }
+    
+    if (!target) {
+        return nullptr;
+    }
+    
+    std::lock_guard<std::mutex> lock(mutex_);
+    
+    std::wstring pathKey(path);  // Convert view to key
+    
+    // ✅ CRITICAL: Check cache first
+    auto it = bitmapCache_.find(pathKey);
+    if (it != bitmapCache_.end()) {
+        // Increment reference count
+        bitmapRefCount_[pathKey]++;
+        return it->second;
+    }
+    
+    // ✅ Cache miss: Load from disk using WIC
+    ID2D1Bitmap* bitmap = loadBitmapFromWIC(path, target);
+    
+    if (!bitmap) {
+        return nullptr;
+    }
+    
+    // ✅ Store in cache
+    bitmapCache_[pathKey] = bitmap;
+    bitmapRefCount_[pathKey] = 1;
+    
+    return bitmap;
+}
+
+void ResourceCache::releaseBitmap(std::wstring_view path) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    
+    std::wstring pathKey(path);
+    
+    auto refIt = bitmapRefCount_.find(pathKey);
+    if (refIt == bitmapRefCount_.end()) {
+        return;  // Not in cache
+    }
+    
+    // Decrement refcount
+    refIt->second--;
+    
+    // ✅ CRITICAL: Only release when refcount hits zero
+    if (refIt->second == 0) {
+        auto bitmapIt = bitmapCache_.find(pathKey);
+        if (bitmapIt != bitmapCache_.end()) {
+            if (bitmapIt->second) {
+                bitmapIt->second->Release();
+            }
+            bitmapCache_.erase(bitmapIt);
+        }
+        bitmapRefCount_.erase(refIt);
+    }
+}
+
+ID2D1Bitmap* ResourceCache::loadBitmapFromWIC(
+    std::wstring_view path,
+    ID2D1RenderTarget* target
+) {
+    if (!wicFactory_) {
+        // Lazy initialize WIC factory
+        HRESULT hr = CoCreateInstance(
+            CLSID_WICImagingFactory,
+            nullptr,
+            CLSCTX_INPROC_SERVER,
+            IID_PPV_ARGS(&wicFactory_)
+        );
+        
+        if (FAILED(hr)) {
+            return nullptr;
+        }
+    }
+    
+    IWICBitmapDecoder* decoder = nullptr;
+    IWICBitmapFrameDecode* frame = nullptr;
+    IWICFormatConverter* converter = nullptr;
+    ID2D1Bitmap* bitmap = nullptr;
+    
+    std::wstring pathStr(path);  // Convert to std::wstring for API
+    
+    HRESULT hr = wicFactory_->CreateDecoderFromFilename(
+        pathStr.c_str(),
+        nullptr,
+        GENERIC_READ,
+        WICDecodeMetadataCacheOnDemand,
+        &decoder
+    );
+    
+    if (FAILED(hr)) goto cleanup_loadBitmap;
+    
+    hr = decoder->GetFrame(0, &frame);
+    if (FAILED(hr)) goto cleanup_loadBitmap;
+    
+    hr = wicFactory_->CreateFormatConverter(&converter);
+    if (FAILED(hr)) goto cleanup_loadBitmap;
+    
+    hr = converter->Initialize(
+        frame,
+        GUID_WICPixelFormat32bppPBGRA,
+        WICBitmapDitherTypeNone,
+        nullptr,
+        0.0,
+        WICBitmapPaletteTypeMedianCut
+    );
+    if (FAILED(hr)) goto cleanup_loadBitmap;
+    
+    hr = target->CreateBitmapFromWicBitmap(converter, nullptr, &bitmap);
+
+cleanup_loadBitmap:
+    if (converter) converter->Release();
+    if (frame) frame->Release();
+    if (decoder) decoder->Release();
+    
+    return bitmap;
+}
+
 // ============================================================================
 // CLEAR CACHES
 // ============================================================================

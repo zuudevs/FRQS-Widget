@@ -56,7 +56,7 @@ public:
     ~TextInput() override;
 
     // Text content
-    void setText(const std::wstring& text);
+    void setText(std::wstring_view text);
     const std::wstring& getText() const noexcept { return text_; }
     void clear() { setText(L""); }
 

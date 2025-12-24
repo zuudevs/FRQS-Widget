@@ -41,7 +41,7 @@ TextInput::~TextInput() = default;
 // TEXT MANAGEMENT
 // ============================================================================
 
-void TextInput::setText(const std::wstring& text) {
+void TextInput::setText(std::wstring_view text) {
     if (text_ == text) return;
     
     text_ = text;
