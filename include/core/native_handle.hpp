@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include "../platform/win32_safe.hpp"
+#include "platform/win32_safe.hpp"
 
 namespace frqs::core {
 

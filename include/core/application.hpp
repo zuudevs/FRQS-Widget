@@ -5,7 +5,7 @@
 #include <chrono>
 #include "window.hpp"
 #include "window_registry.hpp"
-#include "../platform/message_queue.hpp"
+#include "platform/message_queue.hpp"
 
 namespace frqs::core {
 
