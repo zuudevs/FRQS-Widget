@@ -1,5 +1,5 @@
 // src/main.cpp - Hello Window Example
-#include "frqs-widget.hpp" //
+#include "frqs-widget.hpp"
 #include <print>
 
 using namespace frqs;
@@ -20,23 +20,17 @@ public:
     }
 
     void render(widget::Renderer& renderer) override {
-        // [FIX 1] Panggil Base Render DULUAN!
-        // Ini akan menggambar background (sesuai setBackgroundColor) dan children.
-        // Kalau ditaruh di akhir, background akan menimpa gambar custom kita (Overpainting).
+        // 1. Render base (background + children)
         Widget::render(renderer);
         
         auto rect = getRect();
         
-        // [FIX 2] Gambar dekorasi di ATAS background/children
-        
-        // Draw border (Hitam)
+        // 2. Draw border
         renderer.drawRect(rect, widget::colors::Black, 2.0f);
         
-        // Draw label if present
+        // 3. Draw label if present
         if (!label_.empty()) {
-            // [FIX 3] Logika warna teks otomatis.
-            // Kalau widgetnya Header/Footer (background gelap), teks Putih.
-            // Kalau Root/Content (background terang), teks Hitam.
+            // Auto-contrast text color
             widget::Color textColor = (label_ == L"Header" || label_ == L"Footer") 
                                       ? widget::colors::White 
                                       : widget::colors::Black;
@@ -54,7 +48,7 @@ int main() {
     try {
         std::println("=== FRQS-Widget Demo Application ===\n");
         
-        // Get application instance
+        // Get application instance (Singleton)
         auto& app = Application::instance();
         
         // Initialize application
@@ -65,8 +59,8 @@ int main() {
         std::println("Creating main window...");
         WindowParams params;
         params.title = L"FRQS-Widget Demo";
-        params.size = widget::Size(800u, 600u);
-        params.position = widget::Point(100, 100);
+        params.size = {800, 600};
+        params.position = {100, 100};
         params.resizable = true;
         params.visible = true;
         params.decorated = true;
@@ -81,24 +75,24 @@ int main() {
         );
         root->setRect(mainWindow->getClientRect());
         
-        // Create some child widgets
+        // Create child widgets
         auto header = std::make_shared<ColoredWidget>(
             widget::Color(41, 128, 185), // Blue
             L"Header"
         );
-        header->setRect(widget::Rect(0, 0, 800u, 80u));
+        header->setRect(widget::Rect<int32_t, uint32_t>(0, 0, 800, 80));
         
         auto content = std::make_shared<ColoredWidget>(
             widget::Color(236, 240, 241), // White Smoke
             L"Content Area"
         );
-        content->setRect(widget::Rect(0, 80, 800u, 440u));
+        content->setRect(widget::Rect<int32_t, uint32_t>(0, 80, 800, 440));
         
         auto footer = std::make_shared<ColoredWidget>(
             widget::Color(52, 73, 94), // Dark Blue
             L"Footer"
         );
-        footer->setRect(widget::Rect(0, 520, 800u, 80u));
+        footer->setRect(widget::Rect<int32_t, uint32_t>(0, 520, 800, 80));
         
         // Build widget tree
         root->addChild(header);

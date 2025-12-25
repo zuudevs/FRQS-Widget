@@ -1,15 +1,4 @@
 #include <frqs-widget.hpp>
-// Kita tambahkan include eksplisit untuk memastikan compiler melihat definisinya
-#include <widget/list_adapter.hpp>
-#include <widget/list_view.hpp>
-#include <widget/label.hpp>
-#include <core/application.hpp>
-#include <core/window.hpp>
-
-#include <vector>
-#include <string>
-#include <format>
-#include <memory>
 
 using namespace frqs::widget;
 using namespace frqs::core;
