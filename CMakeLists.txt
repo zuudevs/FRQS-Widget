@@ -111,8 +111,16 @@ if(BUILD_TESTS)
 endif()
 
 if(BUILD_EXAMPLES)
-    create_frqs_example(checkbox_demo           examples/checkbox_demo.cpp)
-    # ... (Tambahkan example lain di sini kalau mau)
+    create_frqs_example(button_demo			examples/button_demo.cpp)
+    create_frqs_example(checkbox_demo		examples/checkbox_demo.cpp)
+	create_frqs_example(combobox_demo		examples/combobox_demo.cpp)
+	create_frqs_example(flex_layout_demo	examples/flex_layout_demo.cpp)
+	create_frqs_example(image_demo			examples/image_demo.cpp)
+	create_frqs_example(layout_demo			examples/layout_demo.cpp)
+	create_frqs_example(scrollview_demo		examples/scrollview_demo.cpp)
+	create_frqs_example(virtual_list_demo	examples/virtual_list_demo.cpp)
+	create_frqs_example(widget_demo			examples/widget_demo.cpp)
+	create_frqs_example(window_demo			examples/window_demo.cpp)
 endif()
 
 # ============================================================================

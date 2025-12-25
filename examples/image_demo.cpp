@@ -50,46 +50,6 @@ int main() {
         
         mainContainer->addChild(imageContainer);
         
-        // Options container
-        auto optionsContainer = widget::createVStack(10, 20);
-        optionsContainer->setRect(widget::Rect(0, 0, 660u, 100u));
-        
-        // Scale mode options
-        auto fitCheckbox = std::make_shared<widget::CheckBox>(L"Fit (Preserve Aspect Ratio)");
-        fitCheckbox->setChecked(true);
-        fitCheckbox->setRect(widget::Rect(0, 0, 300u, 30u));
-        fitCheckbox->setOnChanged([image, fitCheckbox](bool checked) {
-            if (checked) {
-                image->setScaleMode(widget::Image::ScaleMode::Fit);
-                std::println("Scale mode: Fit");
-            }
-        });
-        optionsContainer->addChild(fitCheckbox);
-        
-        auto fillCheckbox = std::make_shared<widget::CheckBox>(L"Fill (Crop to Fill)");
-        fillCheckbox->setRect(widget::Rect(0, 0, 300u, 30u));
-        fillCheckbox->setOnChanged([image, fitCheckbox](bool checked) {
-            if (checked) {
-                image->setScaleMode(widget::Image::ScaleMode::Fill);
-                fitCheckbox->setChecked(false);
-                std::println("Scale mode: Fill");
-            }
-        });
-        optionsContainer->addChild(fillCheckbox);
-        
-        auto stretchCheckbox = std::make_shared<widget::CheckBox>(L"Stretch (Ignore Aspect Ratio)");
-        stretchCheckbox->setRect(widget::Rect(0, 0, 300u, 30u));
-        stretchCheckbox->setOnChanged([image, fitCheckbox](bool checked) {
-            if (checked) {
-                image->setScaleMode(widget::Image::ScaleMode::Stretch);
-                fitCheckbox->setChecked(false);
-                std::println("Scale mode: Stretch");
-            }
-        });
-        optionsContainer->addChild(stretchCheckbox);
-        
-        mainContainer->addChild(optionsContainer);
-        
         window->setRootWidget(mainContainer);
         window->show();
         
