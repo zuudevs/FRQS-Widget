@@ -1,4 +1,14 @@
-// src/widget/text_input.cpp - COMPLETE WITH DIRECTWRITE MEASUREMENT
+/**
+ * @file text_input.cpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief Implements the TextInput widget for single-line text entry.
+ * @version 0.1.0
+ * @date 2025-12-25
+ *
+ * @copyright Copyright (c) 2025
+ *
+ */
+
 #include "widget/text_input.hpp"
 #include "event/event_types.hpp"
 #include "render/resource_cache.hpp"
@@ -11,6 +21,11 @@ namespace frqs::widget {
 // TEXT INPUT PIMPL
 // ============================================================================
 
+/**
+ * @brief Private implementation details for the TextInput widget.
+ * @struct TextInput::Impl
+ * @internal
+ */
 struct TextInput::Impl {
     std::chrono::steady_clock::time_point lastBlinkTime;
     Point<int32_t> lastMousePos;
@@ -26,21 +41,31 @@ struct TextInput::Impl {
 // CONSTRUCTOR / DESTRUCTOR
 // ============================================================================
 
+/**
+ * @brief Constructs a new TextInput widget.
+ */
 TextInput::TextInput()
     : Widget()
-    , pImpl_(std::make_unique<Impl>())
+    , pImpl_(std::make_unique<Impl>()) 
 {
     font_.size = 14.0f;
     font_.family = L"Segoe UI";
     setBackgroundColor(backgroundColor_);
 }
 
+/**
+ * @brief Destroys the TextInput widget.
+ */
 TextInput::~TextInput() = default;
 
 // ============================================================================
 // TEXT MANAGEMENT
 // ============================================================================
 
+/**
+ * @brief Sets the text content of the input field.
+ * @param text The new text to display.
+ */
 void TextInput::setText(std::wstring_view text) {
     if (text_ == text) return;
     
@@ -52,6 +77,10 @@ void TextInput::setText(std::wstring_view text) {
     invalidate();
 }
 
+/**
+ * @brief Sets the position of the text insertion cursor.
+ * @param pos The new zero-based index for the cursor.
+ */
 void TextInput::setCursorPosition(size_t pos) {
     cursorPos_ = std::min(pos, text_.length());
     clearSelection();
@@ -59,6 +88,11 @@ void TextInput::setCursorPosition(size_t pos) {
     invalidate();
 }
 
+/**
+ * @brief Sets the text selection range.
+ * @param start The starting index of the selection.
+ * @param end The ending index of the selection.
+ */
 void TextInput::setSelection(size_t start, size_t end) {
     start = std::min(start, text_.length());
     end = std::min(end, text_.length());
@@ -74,12 +108,19 @@ void TextInput::setSelection(size_t start, size_t end) {
     invalidate();
 }
 
+/**
+ * @brief Clears the current text selection.
+ */
 void TextInput::clearSelection() {
     if (!hasSelection_) return;
     hasSelection_ = false;
     invalidate();
 }
 
+/**
+ * @brief Gets the currently selected text.
+ * @return A wide string containing the selected text, or an empty string if there is no selection.
+ */
 std::wstring TextInput::getSelectedText() const {
     if (!hasSelection_) return L"";
     
@@ -92,6 +133,9 @@ std::wstring TextInput::getSelectedText() const {
     return text_.substr(start, len);
 }
 
+/**
+ * @brief Deletes the currently selected text.
+ */
 void TextInput::deleteSelection() {
     if (!hasSelection_) return;
     
@@ -125,6 +169,10 @@ void TextInput::deleteSelection() {
 // FOCUS MANAGEMENT
 // ============================================================================
 
+/**
+ * @brief Sets the focus state of the text input.
+ * @param focus `true` to give focus, `false` to remove focus.
+ */
 void TextInput::setFocus(bool focus) {
     if (focused_ == focus) return;
     
@@ -142,6 +190,13 @@ void TextInput::setFocus(bool focus) {
 // TEXT OPERATIONS
 // ============================================================================
 
+/**
+ * @brief Inserts text at the current cursor position.
+ * 
+ * If text is selected, the selection will be replaced by the inserted text.
+ * 
+ * @param text The text to insert.
+ */
 void TextInput::insertText(const std::wstring& text) {
     if (!enabled_ || text.empty()) return;
     
@@ -170,6 +225,10 @@ void TextInput::insertText(const std::wstring& text) {
     }
 }
 
+/**
+ * @brief Deletes a character adjacent to the cursor.
+ * @param forward `true` to delete the character after the cursor (Delete key), `false` to delete the character before (Backspace key).
+ */
 void TextInput::deleteChar(bool forward) {
     if (!enabled_ || text_.empty()) return;
     
@@ -199,6 +258,9 @@ void TextInput::deleteChar(bool forward) {
     }
 }
 
+/**
+ * @brief Selects all text in the input field.
+ */
 void TextInput::selectAll() {
     if (text_.empty()) return;
     
@@ -208,15 +270,24 @@ void TextInput::selectAll() {
     invalidate();
 }
 
+/**
+ * @brief Copies the selected text to the clipboard. (Not yet implemented)
+ */
 void TextInput::copy() const {
     // TODO: Implement clipboard
 }
 
+/**
+ * @brief Cuts the selected text to the clipboard. (Not yet implemented)
+ */
 void TextInput::cut() {
     copy();
     deleteSelection();
 }
 
+/**
+ * @brief Pastes text from the clipboard. (Not yet implemented)
+ */
 void TextInput::paste() {
     // TODO: Implement clipboard
 }
@@ -225,6 +296,11 @@ void TextInput::paste() {
 // CURSOR MOVEMENT
 // ============================================================================
 
+/**
+ * @brief Moves the cursor by a given number of characters.
+ * @param delta The number of characters to move. Negative values move left, positive values move right.
+ * @param extendSelection If `true`, the text selection is extended.
+ */
 void TextInput::moveCursor(int32_t delta, bool extendSelection) {
     if (delta == 0) return;
     
@@ -262,11 +338,19 @@ void TextInput::moveCursor(int32_t delta, bool extendSelection) {
     invalidate();
 }
 
+/**
+ * @brief Resets the cursor blink timer to make the cursor immediately visible.
+ * @internal
+ */
 void TextInput::updateCursorBlink() {
     pImpl_->lastBlinkTime = std::chrono::steady_clock::now();
     cursorVisible_ = true;
 }
 
+/**
+ * @brief Notifies listeners that the text has changed.
+ * @internal
+ */
 void TextInput::notifyTextChanged() {
     if (onTextChanged_) {
         try {
@@ -277,6 +361,10 @@ void TextInput::notifyTextChanged() {
     }
 }
 
+/**
+ * @brief Ensures the cursor position is within the bounds of the text length.
+ * @internal
+ */
 void TextInput::clampCursor() {
     cursorPos_ = std::min(cursorPos_, text_.length());
 }
@@ -285,6 +373,15 @@ void TextInput::clampCursor() {
 // ✅ PRECISE CURSOR POSITION (DirectWrite Hit-Testing)
 // ============================================================================
 
+/**
+ * @brief Determines the cursor position (character index) from a point within the widget.
+ * 
+ * Uses the extended renderer (DirectWrite) for precise hit-testing.
+ * 
+ * @param point The point in widget-relative coordinates.
+ * @return The zero-based index of the character at that point.
+ * @internal
+ */
 size_t TextInput::getCursorPosFromPoint(const Point<int32_t>& point) const {
     auto rect = getRect();
     int32_t relX = point.x - rect.x - static_cast<int32_t>(padding_);
@@ -310,6 +407,12 @@ size_t TextInput::getCursorPosFromPoint(const Point<int32_t>& point) const {
 // EVENT HANDLING
 // ============================================================================
 
+/**
+ * @brief Handles mouse button press and release events for cursor positioning and selection.
+ * @param evt The mouse button event.
+ * @return `true` if the event was handled, `false` otherwise.
+ * @internal
+ */
 bool TextInput::handleMouseEvent(const event::MouseButtonEvent& evt) {
     auto rect = getRect();
     bool inside = evt.position.x >= rect.x && evt.position.x < static_cast<int32_t>(rect.getRight()) &&
@@ -344,6 +447,12 @@ bool TextInput::handleMouseEvent(const event::MouseButtonEvent& evt) {
     return false;
 }
 
+/**
+ * @brief Handles mouse move events for text selection by dragging.
+ * @param evt The mouse move event.
+ * @return `true` if the event was handled, `false` otherwise.
+ * @internal
+ */
 bool TextInput::handleMouseMove(const event::MouseMoveEvent& evt) {
     pImpl_->lastMousePos = evt.position;
     
@@ -368,6 +477,12 @@ bool TextInput::handleMouseMove(const event::MouseMoveEvent& evt) {
 // ✅ KEYBOARD EVENT HANDLER (WM_CHAR + Navigation)
 // ============================================================================
 
+/**
+ * @brief Handles keyboard events for text input, navigation, and shortcuts.
+ * @param evt The key event.
+ * @return `true` if the event was handled, `false` otherwise.
+ * @internal
+ */
 bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
     if (!focused_ || !enabled_) return false;
     if (evt.action != event::KeyEvent::Action::Press && 
@@ -481,13 +596,18 @@ bool TextInput::handleKeyEvent(const event::KeyEvent& evt) {
             }
             break;
             
-        default:
+default:
             break;
     }
     
     return false;
 }
 
+/**
+ * @brief Main event handler for the TextInput widget.
+ * @param event The event to process.
+ * @return `true` if the event was handled, `false` otherwise.
+ */
 bool TextInput::onEvent(const event::Event& event) {
     try {
         if (auto* mouseBtn = std::get_if<event::MouseButtonEvent>(&event)) {
@@ -512,6 +632,10 @@ bool TextInput::onEvent(const event::Event& event) {
 // ✅ RENDERING (Pixel-Perfect Cursor with DirectWrite)
 // ============================================================================
 
+/**
+ * @brief Renders the text input, including border, background, selection, text, and cursor.
+ * @param renderer The renderer to use for drawing.
+ */
 void TextInput::render(Renderer& renderer) {
     if (!isVisible()) return;
 
@@ -576,7 +700,7 @@ void TextInput::render(Renderer& renderer) {
             if (auto* extRenderer = dynamic_cast<render::IExtendedRenderer*>(&renderer)) {
                 extRenderer->drawTextEx(
                     placeholder_, 
-                    textRect, 
+                    textRect,
                     placeholderColor_,
                     font_,
                     render::TextAlign::Left,
@@ -589,7 +713,7 @@ void TextInput::render(Renderer& renderer) {
             if (auto* extRenderer = dynamic_cast<render::IExtendedRenderer*>(&renderer)) {
                 extRenderer->drawTextEx(
                     text_, 
-                    textRect, 
+                    textRect,
                     textColor_,
                     font_,
                     render::TextAlign::Left,
@@ -609,7 +733,7 @@ void TextInput::render(Renderer& renderer) {
                 cursorXOffset = pImpl_->extRenderer->measureTextWidth(
                     text_, 
                     cursorPos_, 
-                    font_
+                    font_ 
                 );
             }
             

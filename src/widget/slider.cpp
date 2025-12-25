@@ -1,3 +1,14 @@
+/**
+ * @file slider.cpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief Implements the Slider widget for selecting a value from a range.
+ * @version 0.1.0
+ * @date 2025-12-25
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #include "widget/slider.hpp"
 #include <algorithm>
 #include <cmath>
@@ -8,6 +19,11 @@ namespace frqs::widget {
 // SLIDER PIMPL
 // ============================================================================
 
+/**
+ * @brief Private implementation details for the Slider.
+ * @struct Slider::Impl
+ * @internal
+ */
 struct Slider::Impl {
     Point<int32_t> dragStartPos;
     double dragStartValue;
@@ -17,6 +33,10 @@ struct Slider::Impl {
 // SLIDER IMPLEMENTATION
 // ============================================================================
 
+/**
+ * @brief Constructs a new Slider widget.
+ * @param orientation The orientation of the slider (Horizontal or Vertical).
+ */
 Slider::Slider(Orientation orientation)
     : Widget()
     , pImpl_(std::make_unique<Impl>())
@@ -25,8 +45,18 @@ Slider::Slider(Orientation orientation)
     setBackgroundColor(colors::Transparent);
 }
 
+/**
+ * @brief Destroys the Slider widget.
+ */
 Slider::~Slider() = default;
 
+/**
+ * @brief Sets the current value of the slider.
+ * 
+ * The value will be clamped to the slider's range and snapped to the nearest step, if a step value is set.
+ * 
+ * @param value The new value to set.
+ */
 void Slider::setValue(double value) {
     // Clamp and snap to step
     value = std::clamp(value, minValue_, maxValue_);
@@ -38,6 +68,11 @@ void Slider::setValue(double value) {
     invalidate();
 }
 
+/**
+ * @brief Sets the minimum and maximum range of the slider.
+ * @param min The minimum value of the slider.
+ * @param max The maximum value of the slider.
+ */
 void Slider::setRange(double min, double max) {
     if (min >= max) return;
     
@@ -48,6 +83,12 @@ void Slider::setRange(double min, double max) {
     setValue(value_);
 }
 
+/**
+ * @brief Snaps a given value to the nearest valid step.
+ * @param value The value to snap.
+ * @return The snapped value.
+ * @internal
+ */
 double Slider::snapToStep(double value) const {
     if (step_ <= 0.0) return value;
     
@@ -55,12 +96,21 @@ double Slider::snapToStep(double value) const {
     return minValue_ + steps * step_;
 }
 
+/**
+ * @brief Notifies listeners that the slider's value has changed.
+ * @internal
+ */
 void Slider::notifyValueChanged() {
     if (onValueChanged_) {
         onValueChanged_(value_);
     }
 }
 
+/**
+ * @brief Calculates the pixel position of the center of the thumb.
+ * @return The (x, y) coordinates of the thumb's center.
+ * @internal
+ */
 Point<int32_t> Slider::getThumbPosition() const {
     auto rect = getRect();
     double normalized = getNormalizedValue();
@@ -84,6 +134,12 @@ Point<int32_t> Slider::getThumbPosition() const {
     }
 }
 
+/**
+ * @brief Checks if a given point is inside the slider's thumb.
+ * @param point The point to check.
+ * @return `true` if the point is inside the thumb, `false` otherwise.
+ * @internal
+ */
 bool Slider::isPointInThumb(const Point<int32_t>& point) const {
     auto thumbPos = getThumbPosition();
     
@@ -95,6 +151,11 @@ bool Slider::isPointInThumb(const Point<int32_t>& point) const {
     return distSq <= radiusSq;
 }
 
+/**
+ * @brief Updates the slider's value based on a point click/drag position.
+ * @param point The point to use for calculating the new value.
+ * @internal
+ */
 void Slider::updateValueFromPoint(const Point<int32_t>& point) {
     auto rect = getRect();
     double normalized;
@@ -118,6 +179,12 @@ void Slider::updateValueFromPoint(const Point<int32_t>& point) {
     notifyValueChanged();
 }
 
+/**
+ * @brief Handles mouse button press and release events.
+ * @param evt The mouse button event.
+ * @return `true` if the event was handled, `false` otherwise.
+ * @internal
+ */
 bool Slider::handleMouseButton(const event::MouseButtonEvent& evt) {
     if (!enabled_) return false;
     
@@ -148,6 +215,12 @@ bool Slider::handleMouseButton(const event::MouseButtonEvent& evt) {
     return false;
 }
 
+/**
+ * @brief Handles mouse move events for dragging the thumb and updating hover state.
+ * @param evt The mouse move event.
+ * @return `true` if the event was handled, `false` otherwise.
+ * @internal
+ */
 bool Slider::handleMouseMove(const event::MouseMoveEvent& evt) {
     if (!enabled_) return false;
     
@@ -171,6 +244,11 @@ bool Slider::handleMouseMove(const event::MouseMoveEvent& evt) {
     }
 }
 
+/**
+ * @brief Main event handler for the Slider widget.
+ * @param event The event to process.
+ * @return `true` if the event was handled, `false` otherwise.
+ */
 bool Slider::onEvent(const event::Event& event) {
     if (auto* mouseBtn = std::get_if<event::MouseButtonEvent>(&event)) {
         return handleMouseButton(*mouseBtn);
@@ -183,6 +261,10 @@ bool Slider::onEvent(const event::Event& event) {
     return Widget::onEvent(event);
 }
 
+/**
+ * @brief Renders the slider, including the track and thumb.
+ * @param renderer The renderer to use for drawing.
+ */
 void Slider::render(Renderer& renderer) {
     if (!isVisible()) return;
 

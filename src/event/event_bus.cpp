@@ -1,4 +1,19 @@
-#include "../../include/event/event_bus.hpp"
+/**
+ * @file event_bus.cpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief Implementation file for the EventBus and related helpers.
+ * @version 0.1
+ * @date 2025-12-24
+ *
+ * @copyright Copyright (c) 2025
+ *
+ * This file provides the implementation for any non-templated methods of the
+ * EventBus class and defines the global event bus instance accessor. Most of
+ * the EventBus logic resides in the header file (`event_bus.hpp`) due to its
+ * heavy use of templates.
+ */
+
+#include "event/event_bus.hpp"
 
 namespace frqs::event {
 
@@ -6,24 +21,21 @@ namespace frqs::event {
 // EVENT BUS IMPLEMENTATION
 // ============================================================================
 
-// Note: EventBus is mostly implemented in the header as template methods
-// This file exists for any non-template implementation needs
-
-// Example: If we need to add debugging or logging functionality
-// void EventBus::debugPrint() const {
-//     std::lock_guard lock(mutex_);
-//     std::println("EventBus has {} listeners", listeners_.size());
-//     for (const auto& listener : listeners_) {
-//         std::println("  - Listener ID: {}, Priority: {}", 
-//                     listener.id, listener.priority);
-//     }
-// }
+// Most of the EventBus is implemented in the header via template methods.
+// This file is the location for any future non-templated method definitions.
 
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
 
-// Create a global event bus for application-wide events
+/**
+ * @brief Retrieves the global, application-wide EventBus instance.
+ *
+ * This function provides a singleton `EventBus` that can be used for system-wide
+ * event communication, decoupling major components of the application.
+ *
+ * @return A reference to the global EventBus singleton.
+ */
 EventBus& getGlobalEventBus() {
     static EventBus globalBus;
     return globalBus;

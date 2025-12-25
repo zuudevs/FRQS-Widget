@@ -1,4 +1,15 @@
-#include "../../include/render/dirty_rect.hpp"
+/**
+ * @file dirty_rect.cpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2025-12-24
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
+#include "render/dirty_rect.hpp"
 
 namespace frqs::render {
 

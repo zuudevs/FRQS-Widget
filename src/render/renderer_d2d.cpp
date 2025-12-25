@@ -1,4 +1,14 @@
-// src/render/renderer_d2d.cpp (FIXED VERSION with Transform Stack)
+/**
+ * @file renderer_d2d.cpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2025-12-24
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #include "renderer_d2d.hpp"
 #include "render/resource_cache.hpp"
 #include <stdexcept>

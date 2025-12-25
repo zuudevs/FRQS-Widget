@@ -1,8 +1,18 @@
-// src/render/renderer_d2d.hpp - COMPLETE CORRECTED VERSION
+/**
+ * @file renderer_d2d.hpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief 
+ * @version 0.1
+ * @date 2025-12-24
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #pragma once
 
-#include "../../include/render/renderer.hpp"
-#include "../../include/platform/win32_safe.hpp"
+#include "render/renderer.hpp"
+#include "platform/win32_safe.hpp"
 #include <stack>
 
 namespace frqs::render {

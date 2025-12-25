@@ -1,4 +1,14 @@
-// include/widget/list_adapter.hpp
+/**
+ * @file list_adapter.hpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief 
+ * @version 0.1.0
+ * @date 2025-12-25
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #pragma once
 
 #include "iwidget.hpp"

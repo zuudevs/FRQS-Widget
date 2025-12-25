@@ -1,38 +1,32 @@
-// ============================================================================
-// DEBUG CONFIGURATION
-// 0: Off, 1: Click Only, 2: +Hover Enter, 3: +Hover Leave, 4: +Raw Details
-// ============================================================================
-#define FRQS_DEBUG_LEVEL 3
+
+/**
+ * @file button.cpp
+ * @brief Implements the Button widget functionality.
+ *
+ * This file contains the implementation of the Button class, including event
+ * handling for different states (normal, hover, pressed) and rendering logic.
+ */
 
 #include "widget/button.hpp"
 
-// Setup Logging Macro
-#if defined(FRQS_DEBUG_LEVEL) && FRQS_DEBUG_LEVEL > 0
-    #include <print>
-    #include <string>
-    // Helper untuk konversi wstring ke string (biar println ga ngamuk)
-    inline std::string to_string(const std::wstring& ws) {
-        return std::string(ws.begin(), ws.end());
-    }
-    #define DBG_LOG(lvl, ...) \
-        if constexpr (FRQS_DEBUG_LEVEL >= lvl) std::println(__VA_ARGS__)
-#else
-    #define DBG_LOG(lvl, ...) ((void)0)
-#endif
-
 namespace frqs::widget {
 
-// ============================================================================
-// BUTTON PIMPL
-// ============================================================================
+/**
+ * @brief Private implementation details for the Button widget.
+ * @internal
+ */
 
 struct Button::Impl {
-    Point<int32_t> lastMousePos;
+    Point<int32_t> lastMousePos; ///< Stores the last known mouse position.
 };
 
 // ============================================================================
 // BUTTON IMPLEMENTATION
 // ============================================================================
+
+/**
+ * @brief Constructs a Button with the given text.
+ */
 
 Button::Button(const std::wstring& text)
     : Widget()
@@ -45,7 +39,15 @@ Button::Button(const std::wstring& text)
     setBackgroundColor(normalColor_);
 }
 
+/**
+ * @brief Destroys the Button object.
+ */
+
 Button::~Button() = default;
+
+/**
+ * @brief Sets the button's text and invalidates the widget to trigger a repaint.
+ */
 
 void Button::setText(std::wstring_view text) {
     if (text_ == text) return;
@@ -53,11 +55,19 @@ void Button::setText(std::wstring_view text) {
     invalidate();
 }
 
+/**
+ * @brief Sets the button's border properties and invalidates it for repaint.
+ */
+
 void Button::setBorder(const Color& color, float width) noexcept {
     borderColor_ = color;
     borderWidth_ = width;
     invalidate();
 }
+
+/**
+ * @brief Updates the button's state and background color, then invalidates it.
+ */
 
 void Button::setState(State state) noexcept {
     if (state_ == state) return;
@@ -66,9 +76,18 @@ void Button::setState(State state) noexcept {
     invalidate();
 }
 
+/**
+ * @brief Sets the button's enabled state.
+ */
+
 void Button::setEnabled(bool enabled) noexcept {
     setState(enabled ? State::Normal : State::Disabled);
 }
+
+/**
+ * @brief Retrieves the background color based on the current button state.
+ * @internal
+ */
 
 Color Button::getCurrentColor() const noexcept {
     switch (state_) {
@@ -80,15 +99,23 @@ Color Button::getCurrentColor() const noexcept {
     }
 }
 
+/**
+ * @brief Checks if a point is within the button's rectangular bounds.
+ * @internal
+ */
+
 bool Button::isPointInside(const Point<int32_t>& point) const noexcept {
     auto rect = getRect();
     return point.x >= rect.x && point.x < static_cast<int32_t>(rect.getRight()) &&
            point.y >= rect.y && point.y < static_cast<int32_t>(rect.getBottom());
 }
 
+/**
+ * @brief Handles mouse events to update the button's state and trigger clicks.
+ */
+
 bool Button::onEvent(const event::Event& event) {
     if (!isEnabled()) return false;
-
     // Handle mouse button events
     if (auto* mouseBtn = std::get_if<event::MouseButtonEvent>(&event)) {
         if (mouseBtn->button == event::MouseButtonEvent::Button::Left) {
@@ -102,11 +129,6 @@ bool Button::onEvent(const event::Event& event) {
                     if (isPointInside(mouseBtn->position)) {
                         // Button was clicked!
                         if (onClick_) {
-                            // LEVEL 1: Click Event (Paling penting)
-                            #if defined(FRQS_DEBUG_LEVEL) && FRQS_DEBUG_LEVEL >= 1
-                            DBG_LOG(1, "[Button] '{}' CLICKED!", to_string(text_));
-                            #endif
-                            
                             onClick_();
                         }
                         setState(State::Hovered);
@@ -118,42 +140,31 @@ bool Button::onEvent(const event::Event& event) {
             }
         }
     }
-    
+
     // Handle mouse move events
     if (auto* mouseMove = std::get_if<event::MouseMoveEvent>(&event)) {
         pImpl_->lastMousePos = mouseMove->position;
-        
         bool inside = isPointInside(mouseMove->position);
-        
         if (state_ == State::Pressed) {
             return true;
         } else if (inside && state_ == State::Normal) {
-            // LEVEL 2: Enter Hover (Diagnosa Ghost Hover)
-            #if defined(FRQS_DEBUG_LEVEL) && FRQS_DEBUG_LEVEL >= 2
-            DBG_LOG(2, "[Button] '{}' ENTER Hover. Mouse: ({}, {})", 
-                to_string(text_), mouseMove->position.x, mouseMove->position.y);
-            #endif
-            
             setState(State::Hovered);
             return true;
         } else if (!inside && state_ == State::Hovered) {
-            // LEVEL 3: Leave Hover (Diagnosa salah koordinat)
-            #if defined(FRQS_DEBUG_LEVEL) && FRQS_DEBUG_LEVEL >= 3
-            DBG_LOG(3, "[Button] '{}' LEAVE Hover. Mouse: ({}, {})", 
-                to_string(text_), mouseMove->position.x, mouseMove->position.y);
-            #endif
-            
             setState(State::Normal);
             return true;
         }
     }
-
     return Widget::onEvent(event);
+
 }
+
+/**
+ * @brief Renders the button on the screen.
+ */
 
 void Button::render(Renderer& renderer) {
     if (!isVisible()) return;
-
     auto rect = getRect();
     auto bgColor = getCurrentColor();
 
@@ -162,12 +173,15 @@ void Button::render(Renderer& renderer) {
         // Draw rounded rectangle button
         extRenderer->fillRoundedRect(rect, borderRadius_, borderRadius_, bgColor);
         
-        // Draw border if present
+		// Draw border if present
         if (borderWidth_ > 0.0f && borderColor_.a > 0) {
-            extRenderer->drawRoundedRect(rect, borderRadius_, borderRadius_, 
-                                        borderColor_, borderWidth_);
+            extRenderer->drawRoundedRect(
+				rect, borderRadius_, 
+				borderRadius_, borderColor_, 
+				borderWidth_
+			);
         }
-        
+
         // Draw text
         if (!text_.empty()) {
             extRenderer->drawTextEx(
@@ -182,11 +196,9 @@ void Button::render(Renderer& renderer) {
     } else {
         // Fallback to basic rendering
         renderer.fillRect(rect, bgColor);
-        
         if (borderWidth_ > 0.0f && borderColor_.a > 0) {
             renderer.drawRect(rect, borderColor_, borderWidth_);
         }
-        
         if (!text_.empty()) {
             renderer.drawText(text_, rect, textColor_);
         }

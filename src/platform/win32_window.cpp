@@ -1,11 +1,18 @@
-#include "platform/win32_safe.hpp"
+/**
+ * @file win32_window.cpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief Implements the Win32 windowing backend for the application.
+ * @version 0.1
+ * @date 2025-12-24
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #include "core/window.hpp"
-#include "core/application.hpp"
 #include "core/window_impl.hpp"
 #include "event/event_types.hpp"
 #include <shellapi.h>
-#include <filesystem>
-#include <unordered_map>
 #include <mutex>
 
 namespace frqs::platform {
@@ -14,29 +21,54 @@ namespace frqs::platform {
 // WINDOW CLASS REGISTRATION
 // ============================================================================
 
+/**
+ * @class Win32WindowClass
+ * @brief Manages the registration and lifecycle of the Win32 window class.
+ * 
+ * This class is a singleton that ensures the WNDCLASSEXW for the application's
+ * windows is registered only once. It also handles unregistration on exit.
+ */
 class Win32WindowClass {
 private:
-    static constexpr const wchar_t* CLASS_NAME = L"FRQS_Window_Class";
-    ATOM classAtom_ = 0;
-    HINSTANCE hInstance_ = nullptr;
-    std::mutex mutex_;
+    static constexpr const wchar_t* CLASS_NAME = L"FRQS_Window_Class"; ///< The name of the window class.
+    ATOM classAtom_ = 0; ///< The atom representing the registered window class.
+    HINSTANCE hInstance_ = nullptr; ///< The instance handle of the application.
+    std::mutex mutex_; ///< Mutex for thread-safe initialization.
     
+    /**
+     * @brief Gets the singleton instance of the Win32WindowClass.
+     * @return A reference to the singleton instance.
+     */
     static Win32WindowClass& instance() {
         static Win32WindowClass inst;
         return inst;
     }
 
+    /**
+     * @brief Private constructor to enforce singleton pattern.
+     * 
+     * Initializes the instance handle and registers the window class.
+     */
     Win32WindowClass() {
         hInstance_ = GetModuleHandleW(nullptr);
         registerClass();
     }
 
+    /**
+     * @brief Destructor.
+     * 
+     * Unregisters the window class if it was successfully registered.
+     */
     ~Win32WindowClass() {
         if (classAtom_ && hInstance_) {
             UnregisterClassW(CLASS_NAME, hInstance_);
         }
     }
 
+    /**
+     * @brief Registers the WNDCLASSEXW for the application windows.
+     * @throws std::runtime_error if class registration fails.
+     */
     void registerClass() {
         WNDCLASSEXW wcex = {};
         wcex.cbSize = sizeof(WNDCLASSEXW);
@@ -58,6 +90,16 @@ private:
         }
     }
 
+    /**
+     * @brief The main window procedure for all windows created with this class.
+     * 
+     * This static method dispatches messages to the appropriate `core::Window` instance.
+     * @param hwnd Handle to the window.
+     * @param msg The message.
+     * @param wp Additional message information.
+     * @param lp Additional message information.
+     * @return The result of the message processing.
+     */
     static LRESULT CALLBACK windowProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
         core::Window* window = nullptr;
         
@@ -76,6 +118,15 @@ private:
         return DefWindowProcW(hwnd, msg, wp, lp);
     }
 
+    /**
+     * @brief Handles a specific window message and translates it into an application event.
+     * @param window Pointer to the `core::Window` instance.
+     * @param hwnd Handle to the window.
+     * @param msg The message.
+     * @param wp Additional message information.
+     * @param lp Additional message information.
+     * @return The result of the message processing.
+     */
     static LRESULT handleMessage(core::Window* window, HWND hwnd, UINT msg, 
                                 WPARAM wp, LPARAM lp) {
         auto* pImpl = window->pImpl_.get();
@@ -397,6 +448,19 @@ private:
     }
 
 public:
+    /**
+     * @brief Creates a new Win32 window.
+     * 
+     * @param title The window title.
+     * @param x The x-coordinate of the window's top-left corner.
+     * @param y The y-coordinate of the window's top-left corner.
+     * @param width The width of the window.
+     * @param height The height of the window.
+     * @param style The window style flags.
+     * @param exStyle The extended window style flags.
+     * @param userData A pointer to user data to be associated with the window.
+     * @return The handle to the created window, or nullptr on failure.
+     */
     static HWND createWindow(
         const wchar_t* title,
         int x, int y,
@@ -424,6 +488,12 @@ public:
         );
     }
 
+    /**
+     * @brief Ensures that the window class is registered.
+     * 
+     * This function can be called to explicitly initialize the singleton
+     * and register the window class before creating any windows.
+     */
     static void ensureRegistered() {
         instance();
     }
@@ -433,6 +503,14 @@ public:
 // WIN32 WINDOW CREATION HELPER
 // ============================================================================
 
+/**
+ * @brief Creates a native Win32 window based on the provided parameters.
+ * 
+ * @param params The parameters for creating the window.
+ * @param windowPtr A pointer to the `core::Window` that this native window represents.
+ * @return The handle to the created native window.
+ * @throws std::runtime_error if window creation fails.
+ */
 HWND createNativeWindow(
     const core::WindowParams& params,
     void* windowPtr

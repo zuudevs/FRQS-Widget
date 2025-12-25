@@ -1,3 +1,14 @@
+/**
+ * @file scroll_view.cpp
+ * @author zuudevs (zuudevs@gmail.com)
+ * @brief Implements the ScrollView widget, a container that allows scrolling of its content.
+ * @version 0.1.0
+ * @date 2025-12-25
+ * 
+ * @copyright Copyright (c) 2025
+ * 
+ */
+
 #include "widget/scroll_view.hpp"
 #include "render/renderer.hpp"
 #include <algorithm>
@@ -8,10 +19,20 @@ namespace frqs::widget {
 // CONSTRUCTOR & CONTENT
 // ============================================================================
 
+/**
+ * @brief Constructs a new ScrollView widget.
+ */
 ScrollView::ScrollView() : Widget() {
     setBackgroundColor(colors::White);
 }
 
+/**
+ * @brief Sets the content widget to be displayed within the scroll view.
+ * 
+ * If there is existing content, it will be removed and replaced with the new content.
+ * 
+ * @param content A shared pointer to the widget to be used as content.
+ */
 void ScrollView::setContent(std::shared_ptr<IWidget> content) {
     if (content_) {
         removeChild(content_.get());
@@ -32,6 +53,14 @@ void ScrollView::setContent(std::shared_ptr<IWidget> content) {
 // SCROLLING CONTROL
 // ============================================================================
 
+/**
+ * @brief Scrolls the view to a specific offset.
+ * 
+ * The values will be clamped to the valid scrollable range.
+ * 
+ * @param x The horizontal scroll offset.
+ * @param y The vertical scroll offset.
+ */
 void ScrollView::scrollTo(float x, float y) {
     scrollOffset_.x = x;
     scrollOffset_.y = y;
@@ -39,6 +68,11 @@ void ScrollView::scrollTo(float x, float y) {
     invalidate();
 }
 
+/**
+ * @brief Scrolls the view by a given delta amount.
+ * @param dx The change in horizontal scroll offset.
+ * @param dy The change in vertical scroll offset.
+ */
 void ScrollView::scrollBy(float dx, float dy) {
     scrollOffset_.x += dx;
     scrollOffset_.y += dy;
@@ -46,6 +80,9 @@ void ScrollView::scrollBy(float dx, float dy) {
     invalidate();
 }
 
+/**
+ * @brief Scrolls the view to the very bottom of the content.
+ */
 void ScrollView::scrollToBottom() {
     auto viewport = getViewportRect();
     float maxScrollY = static_cast<float>(contentSize_.h) - viewport.h;
@@ -56,6 +93,16 @@ void ScrollView::scrollToBottom() {
 // HIT-TEST OVERRIDE (CRITICAL FIX)
 // ============================================================================
 
+/**
+ * @brief Performs a hit test to determine which widget is at a given point.
+ * 
+ * This override is crucial for ensuring that scrollbars and content are correctly
+ * targeted by mouse events. It checks scrollbars first, then translates the point
+ * into the content's coordinate space for further testing.
+ * 
+ * @param point The point to test, in the parent's coordinate system.
+ * @return A pointer to the widget at the specified point, or `nullptr` if no widget is hit.
+ */
 IWidget* ScrollView::hitTest(const Point<int32_t>& point) {
     // 1. Check visibility
     if (!isVisible()) return nullptr;
@@ -101,12 +148,21 @@ IWidget* ScrollView::hitTest(const Point<int32_t>& point) {
 // EVENT HANDLING
 // ============================================================================
 
+/**
+ * @brief Sets the rectangle defining the widget's bounds.
+ * @param rect The new widget bounds.
+ */
 void ScrollView::setRect(const Rect<int32_t, uint32_t>& rect) {
     Widget::setRect(rect);
     updateContentSize();
     clampScrollOffset();
 }
 
+/**
+ * @brief Handles incoming events for the widget.
+ * @param event The event to process.
+ * @return `true` if the event was handled by the scroll view itself (e.g., scrollbar interaction), `false` otherwise.
+ */
 bool ScrollView::onEvent(const event::Event& event) {
     // Mouse wheel
     if (auto* wheelEvt = std::get_if<event::MouseWheelEvent>(&event)) {
@@ -136,6 +192,12 @@ bool ScrollView::onEvent(const event::Event& event) {
 // MOUSE EVENT HANDLERS
 // ============================================================================
 
+/**
+ * @brief Handles mouse wheel events to scroll the content.
+ * @param evt The mouse wheel event.
+ * @return `true` if the event was handled, `false` otherwise.
+ * @internal
+ */
 bool ScrollView::handleMouseWheel(const event::MouseWheelEvent& evt) {
     auto viewport = getViewportRect();
     
@@ -153,6 +215,12 @@ bool ScrollView::handleMouseWheel(const event::MouseWheelEvent& evt) {
     return true;
 }
 
+/**
+ * @brief Handles mouse button events for scrollbar interaction (dragging and track clicking).
+ * @param evt The mouse button event.
+ * @return `true` if the event was handled, `false` otherwise.
+ * @internal
+ */
 bool ScrollView::handleMouseButton(const event::MouseButtonEvent& evt) {
     if (evt.button != event::MouseButtonEvent::Button::Left) return false;
     
@@ -214,6 +282,12 @@ bool ScrollView::handleMouseButton(const event::MouseButtonEvent& evt) {
     return false;
 }
 
+/**
+ * @brief Handles mouse move events for dragging scrollbar thumbs and updating hover states.
+ * @param evt The mouse move event.
+ * @return `true` if the event was handled, `false` otherwise.
+ * @internal
+ */
 bool ScrollView::handleMouseMove(const event::MouseMoveEvent& evt) {
     // Handle dragging
     if (draggingVScroll_) {
@@ -268,6 +342,16 @@ bool ScrollView::handleMouseMove(const event::MouseMoveEvent& evt) {
 // RENDER (CRITICAL FIX: Proper Transform Stack)
 // ============================================================================
 
+/**
+ * @brief Renders the scroll view, its content, and scrollbars.
+ * 
+ * This method uses a clip rectangle to ensure content is only drawn within the
+ * viewport. It then applies a translation transform to the renderer before
+ * drawing the content, effectively scrolling it. Scrollbars are drawn on top
+ * afterwards without the transform.
+ * 
+ * @param renderer The renderer to use for drawing.
+ */
 void ScrollView::render(Renderer& renderer) {
     if (!isVisible()) return;
 
@@ -317,6 +401,10 @@ void ScrollView::render(Renderer& renderer) {
 // HELPER METHODS
 // ============================================================================
 
+/**
+ * @brief Updates the cached size of the content widget.
+ * @internal
+ */
 void ScrollView::updateContentSize() {
     if (!content_) {
         contentSize_ = Size<uint32_t>(0, 0);
@@ -327,6 +415,10 @@ void ScrollView::updateContentSize() {
     contentSize_ = Size<uint32_t>(contentRect.w, contentRect.h);
 }
 
+/**
+ * @brief Clamps the current scroll offset to be within the valid scrollable range.
+ * @internal
+ */
 void ScrollView::clampScrollOffset() {
     auto viewport = getViewportRect();
     
@@ -337,6 +429,12 @@ void ScrollView::clampScrollOffset() {
     scrollOffset_.y = std::clamp(scrollOffset_.y, 0.0f, maxScrollY);
 }
 
+/**
+ * @brief Gets the rectangle for the viewport where content is displayed.
+ * This excludes the area taken by visible scrollbars.
+ * @return The viewport rectangle.
+ * @internal
+ */
 Rect<int32_t, uint32_t> ScrollView::getViewportRect() const {
     auto rect = getRect();
     uint32_t w = rect.w;
@@ -353,6 +451,11 @@ Rect<int32_t, uint32_t> ScrollView::getViewportRect() const {
     return Rect<int32_t, uint32_t>(rect.x, rect.y, w, h);
 }
 
+/**
+ * @brief Gets the rectangle for the vertical scrollbar track.
+ * @return The scrollbar rectangle. Returns a zero-sized rect if not shown.
+ * @internal
+ */
 Rect<int32_t, uint32_t> ScrollView::getVerticalScrollbarRect() const {
     auto rect = getRect();
     auto viewport = getViewportRect();
@@ -365,6 +468,11 @@ Rect<int32_t, uint32_t> ScrollView::getVerticalScrollbarRect() const {
     return Rect<int32_t, uint32_t>(x, rect.y, static_cast<uint32_t>(scrollbarWidth_), viewport.h);
 }
 
+/**
+ * @brief Gets the rectangle for the horizontal scrollbar track.
+ * @return The scrollbar rectangle. Returns a zero-sized rect if not shown.
+ * @internal
+ */
 Rect<int32_t, uint32_t> ScrollView::getHorizontalScrollbarRect() const {
     auto rect = getRect();
     auto viewport = getViewportRect();
@@ -377,6 +485,11 @@ Rect<int32_t, uint32_t> ScrollView::getHorizontalScrollbarRect() const {
     return Rect<int32_t, uint32_t>(rect.x, y, viewport.w, static_cast<uint32_t>(scrollbarWidth_));
 }
 
+/**
+ * @brief Gets the rectangle for the vertical scrollbar thumb (the draggable part).
+ * @return The vertical thumb rectangle.
+ * @internal
+ */
 Rect<int32_t, uint32_t> ScrollView::getVerticalThumbRect() const {
     auto scrollbarRect = getVerticalScrollbarRect();
     if (scrollbarRect.w == 0) return scrollbarRect;
@@ -393,6 +506,11 @@ Rect<int32_t, uint32_t> ScrollView::getVerticalThumbRect() const {
     return Rect<int32_t, uint32_t>(scrollbarRect.x, thumbY, scrollbarRect.w, thumbHeight);
 }
 
+/**
+ * @brief Gets the rectangle for the horizontal scrollbar thumb (the draggable part).
+ * @return The horizontal thumb rectangle.
+ * @internal
+ */
 Rect<int32_t, uint32_t> ScrollView::getHorizontalThumbRect() const {
     auto scrollbarRect = getHorizontalScrollbarRect();
     if (scrollbarRect.h == 0) return scrollbarRect;
@@ -409,6 +527,11 @@ Rect<int32_t, uint32_t> ScrollView::getHorizontalThumbRect() const {
     return Rect<int32_t, uint32_t>(thumbX, scrollbarRect.y, thumbWidth, scrollbarRect.h);
 }
 
+/**
+ * @brief Renders the vertical and horizontal scrollbars, if needed.
+ * @param renderer The renderer to use for drawing.
+ * @internal
+ */
 void ScrollView::renderScrollbars(Renderer& renderer) {
     if (!showScrollbars_) return;
     
@@ -437,6 +560,12 @@ void ScrollView::renderScrollbars(Renderer& renderer) {
     }
 }
 
+/**
+ * @brief Translates a point from the scroll view's coordinate system to the content's coordinate system.
+ * @param screenPoint The point in the scroll view's coordinates.
+ * @return The corresponding point in the content's coordinates.
+ * @internal
+ */
 Point<int32_t> ScrollView::translateToContentSpace(const Point<int32_t>& screenPoint) const {
     auto viewport = getViewportRect();
     return Point<int32_t>(
@@ -445,6 +574,12 @@ Point<int32_t> ScrollView::translateToContentSpace(const Point<int32_t>& screenP
     );
 }
 
+/**
+ * @brief Checks if a point is within the vertical scrollbar thumb.
+ * @param point The point to check.
+ * @return `true` if the point is inside the thumb, `false` otherwise.
+ * @internal
+ */
 bool ScrollView::isPointInVerticalScrollbar(const Point<int32_t>& point) const {
     auto thumbRect = getVerticalThumbRect();
     return thumbRect.w > 0 && 
@@ -452,6 +587,12 @@ bool ScrollView::isPointInVerticalScrollbar(const Point<int32_t>& point) const {
            point.y >= thumbRect.y && point.y < static_cast<int32_t>(thumbRect.getBottom());
 }
 
+/**
+ * @brief Checks if a point is within the horizontal scrollbar thumb.
+ * @param point The point to check.
+ * @return `true` if the point is inside the thumb, `false` otherwise.
+ * @internal
+ */
 bool ScrollView::isPointInHorizontalScrollbar(const Point<int32_t>& point) const {
     auto thumbRect = getHorizontalThumbRect();
     return thumbRect.h > 0 && 
