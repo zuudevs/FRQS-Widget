@@ -1,5 +1,6 @@
 #include "event/event_bus.hpp"
 #include "event/event_types.hpp"
+#include "event/event.hpp"
 #include <cassert>
 #include <iostream>
 #include <string>
